@@ -1,4 +1,4 @@
-spray-akka
-==========
+scaladays2013
+=============
 
-Akka, Spray; OpenCV; iOS example
+The ScalaDays2013 talk

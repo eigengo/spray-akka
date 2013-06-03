@@ -1,0 +1,15 @@
+<configuration>
+
+  <appender name="console" class="ch.qos.logback.core.ConsoleAppender">
+    <encoder>
+      <pattern>%date{HH:mm:ss} %-5level [%X{akkaSource}] - %msg%n</pattern>
+    </encoder>
+  </appender>
+
+  <logger name="akka" level="info" additivity="false">
+    <appender-ref ref="console" />
+  </logger>
+
+  <root level="error"/>
+
+</configuration>
