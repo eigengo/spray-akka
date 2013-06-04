@@ -2,9 +2,7 @@ package org.eigengo.sd
 
 import scala.annotation.tailrec
 import org.eigengo.sd.core.{ConfigCoreConfiguration, Core, Begin, CoordinatorActor}
-import scala.io.Source
 import java.io.{InputStream, BufferedInputStream, FileInputStream}
-import scala.util.Try
 
 /**
  * Shell provides the command-line interface to the functionality in

@@ -689,6 +689,17 @@ class StreamingRecogService(coordinator: ActorRef) extends Actor {
 
 Just a bit of typing, is all! Notice though that we handle HTTP chunks. In other words, we expect our clients to send us the video stream by parts, not in one big chunk. 
 
+#REST server app
+Finally, we need to build another ``App`` object. This time, we will be starting the REST API. Looking at the ``Api`` and ``Core`` traits, nothing could be simpler! 
+
+_Observe!_
+
+```scala
+object Rest extends App with Core with Api with ConfigCoreConfiguration
+```
+
+And that's it!
+
 #Let's play!
 I happen to have my iPhone here with the app installed; and I've pre-recorded a video. Let's see how it all behaves.
 
