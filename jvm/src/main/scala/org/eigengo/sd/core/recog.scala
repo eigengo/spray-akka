@@ -72,9 +72,9 @@ private[core] class RecogSessionActor(amqpConnection: ActorRef, jabberActor: Act
   // thank goodness for British spelling :)
   val emptyBehaviour: StateFunction = { case _ => stay() }
 
-  def countCoins(image: Array[Byte]): Unit =
+  def countCoins(minCoins: Int)(image: Array[Byte]): Unit =
     amqpAsk[CoinResponse](amqp)("amq.direct", "count.key", mkImagePayload(image)) onSuccess {
-      case res => jabberActor ! res
+      case res => if (res.coins.size >= minCoins) jabberActor ! res
     }
 
   // we start idle and empty and then progress through the states
@@ -87,8 +87,8 @@ private[core] class RecogSessionActor(amqpConnection: ActorRef, jabberActor: Act
   }
 
   when(Active, stateTimeout) {
-    case Event(Image(image, end), r@Running(minCount, None)) if image.length > 0  =>
-      val decoder = new NoopDecoderContext(countCoins)
+    case Event(Image(image, end), r@Running(minCoins, None)) if image.length > 0  =>
+      val decoder = new NoopDecoderContext(countCoins(minCoins))
       decoder.decode(image, end)
       stay() using r.copy(decoder = Some(decoder))
     case Event(Image(image, end), Running(minCount, Some(decoder: ImageDecoderContext))) if image.length > 0  =>
@@ -98,8 +98,8 @@ private[core] class RecogSessionActor(amqpConnection: ActorRef, jabberActor: Act
       decoder.close()
       goto(Completed)
 
-    case Event(Frame(frame, _), r@Running(minCount, None)) =>
-      val decoder = new H264DecoderContext(countCoins)
+    case Event(Frame(frame, _), r@Running(minCoins, None)) =>
+      val decoder = new H264DecoderContext(countCoins(minCoins))
       decoder.decode(frame, true)
       stay() using r.copy(decoder = Some(decoder))
     case Event(Frame(frame, _), Running(minCount, Some(decoder: VideoDecoderContext))) if frame.length > 0 =>

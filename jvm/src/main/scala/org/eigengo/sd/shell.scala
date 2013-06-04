@@ -1,12 +1,12 @@
 package org.eigengo.sd
 
 import scala.annotation.tailrec
-import org.eigengo.sd.core.{Core, Begin, CoordinatorActor}
+import org.eigengo.sd.core.{ConfigCoreConfiguration, Core, Begin, CoordinatorActor}
 import scala.io.Source
 import java.io.{InputStream, BufferedInputStream, FileInputStream}
 import scala.util.Try
 
-object Shell extends App with Core {
+object Shell extends App with Core with ConfigCoreConfiguration {
 
   import CoordinatorActor._
   import Commands._

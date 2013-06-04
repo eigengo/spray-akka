@@ -6,15 +6,29 @@ import com.github.sstone.amqp.ConnectionOwner
 
 case class Begin(minCoins: Int)
 
+trait CoreConfiguration {
+
+  def amqpConnectionFactory: ConnectionFactory
+
+}
+
+trait ConfigCoreConfiguration extends CoreConfiguration {
+  def system: ActorSystem
+
+  private val amqpHost = system.settings.config.getString("spray-akka.amqp.host")
+  // connection factory
+  val amqpConnectionFactory = new ConnectionFactory(); amqpConnectionFactory.setHost(amqpHost)
+
+}
+
 trait Core {
+  this: CoreConfiguration =>
+
   // start the actor system
   implicit val system = ActorSystem("recog")
 
-  // connection factory
-  private val connectionFactory = new ConnectionFactory(); connectionFactory.setHost("localhost")
-
   // create a "connection owner" actor, which will try and reconnect automatically if the connection ins lost
-  val amqpConnection = system.actorOf(Props(new ConnectionOwner(connectionFactory)))
+  val amqpConnection = system.actorOf(Props(new ConnectionOwner(amqpConnectionFactory)))
 
   // create the coordinator actor
   val coordinator = system.actorOf(Props(new CoordinatorActor(amqpConnection)), "coordinator")
