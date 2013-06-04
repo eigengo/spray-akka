@@ -44,7 +44,7 @@ The coordinator receives the ``Begin`` message and creates a _session actor_, pa
 The _???_ component is responsible for initiating these messages; it is either a command-line app or it is a complete REST server app.
 
 #Let's begin
-Let's take a look at the shell application. It extends ``App`` and mixes in the "headless" components.
+Let's take a look at the shell application. It extends ``App`` and presents trivial user interface.
 
 ```scala
 object Shell extends App {
