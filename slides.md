@@ -76,12 +76,15 @@ trait Core {
   // start the actor system
   implicit val system = ActorSystem("recog")
 
-  val amqpConnection = system.actorOf(...)
+  val amqpConnectionFactory: ConnectionFactory = new ConnectionFactory()
+  amqpConnectionFactory.setHost("localhost")
+  
+  val amqpConnection = system.actorOf(Props(new ConnectionOwner(amqpConnectionFactory)))
   val coordinator = system.actorOf(Props(new CoordinatorActor(amqpConnection)), "coordinator")
 }
 ```
 
-```
+```scala
 trait Api {
   this: Core =>
 
