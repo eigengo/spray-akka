@@ -39,7 +39,7 @@ object Shell extends App with Core {
         coordinator ! SingleImage(id, data, true)
         commandLoop()
       case VideoCommand(id, fileName) =>
-        readChunks(fileName, 128)(coordinator ! FrameChunk(id, _, true))
+        readChunks(fileName, 64)(coordinator ! FrameChunk(id, _, true))
         commandLoop()
       case GetInfoCommand(id) =>
         coordinator ! GetInfo(id)
@@ -84,7 +84,7 @@ object Utils {
 
     @tailrec
     def read(is: InputStream): Unit = {
-      val buffer = Array.ofDim[Byte](65535)
+      val buffer = Array.ofDim[Byte](16000)
       Thread.sleep(buffer.length / kbps)   // simluate slow input
       val len = is.read(buffer)
       if (len > 0) {

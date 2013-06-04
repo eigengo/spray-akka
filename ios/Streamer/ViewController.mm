@@ -69,10 +69,13 @@
 	// (a) using static images
 	//serverConnectionInput = [serverTransactionConnection staticInput:self];
 	
-	// (b) using stream
+	// (b) using MJPEG stream
 	serverConnectionInput = [serverTransactionConnection mjpegInput:self];
 	
-	// (c) using RTSP server
+	// (c) using H.264 stream
+	//serverConnectionInput = [serverTransactionConnection h264Input:self];
+
+	// (d) using RTSP server
 	//NSURL *url;
 	//serverConnectionInput = [serverTransactionConnection rtspServerInput:self url:&url];
 	//[self.statusLabel setText:[url absoluteString]];
