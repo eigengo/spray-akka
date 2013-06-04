@@ -515,3 +515,83 @@ private[core] trait AmqpOperations {
 ```
 
 Right. The ``amqp`` ``ActorRef`` behaves just like ordinary Akka actor, except it sends the message over AMQP. Mixed into our ``RecogSessionActor`` makes us ready to move on!
+
+#Stringly-typed
+Oh, the humanity! We have ``Future[String]`` returned from the ``amqpAsk`` function. Stringly-typed is not a good thing to have; we know that the response will be a JSON; one that matches
+
+```scala
+private[core] case class Coin(center: Double, radius: Double)
+private[core] case class CoinResponse(coins: List[Coin], succeeded: Boolean)
+```
+
+Let's no modify the ``amqpAsk`` to deal with it. _Any suggestions?_
+
+#Stand back. I know typeclasses!
+Specifically, typeclass ``JsonReader[A]``, whose instances can turn some JSON into instances of ``A``s. We then leave the compiler to do the dirty work for us and select the appropriate ``JsonReader[A]`` in our ``amqpAsk``. We need to make it polymorphic and ask the compiler to implicitly give us instance of ``JsonReader`` for that ``A``. Of course, we're now returning ``Future[A]``.
+
+```scala
+private[core] trait AmqpOperations {
+
+  protected def amqpAsk[A](amqp: ActorRef)
+                       (exchange: String, routingKey: String, payload: Array[Byte])
+                       (implicit ctx: ExecutionContext, reader: JsonReader[A]): Future[A] = {
+    import scala.concurrent.duration._
+    import akka.pattern.ask
+
+    val builder = new AMQP.BasicProperties.Builder
+    implicit val timeout = Timeout(2.seconds)
+
+    (amqp ? Request(Publish(exchange, routingKey, payload, Some(builder.build())) :: Nil)).map {
+      case Response(Delivery(_, _, _, body)::_) =>
+        val s = new String(body)
+        reader.read(JsonParser(s))
+      case x => sys.error("Bad match " + x)
+    }
+  }
+
+}
+```
+
+Goodie. But what about the instances of ``JsonReader`` for our ``CoinResponse`` and ``Coin``? We put them in yet another trait that we can mix in to our actor.
+
+```scala
+trait RecogSessionActorFormats extends DefaultJsonProtocol {
+  import RecogSessionActor._
+
+  implicit val CoinFormat = jsonFormat2(Coin)
+  implicit val CoinResponseFormat = jsonFormat2(CoinResponse)
+}
+```
+
+Now, when used in the ``RecogSessionActor``, we're now all set:
+
+```scala
+private[core] class RecogSessionActor(amqpConnection: ActorRef, jabberActor: ActorRef) extends Actor with
+  FSM[RecogSessionActor.State, RecogSessionActor.Data] with
+  AmqpOperations with
+  ImageEncoding with
+  RecogSessionActorFormats {
+
+
+  def countCoins(minCoins: Int)(image: Array[Byte]): Unit =
+    amqpAsk[CoinResponse](amqp)("amq.direct", "count.key", mkImagePayload(image)) onSuccess {
+      case res => if (res.coins.size >= minCoins) jabberActor ! res
+    }
+}
+```
+
+#Let's now see...
+We should be able to us the shell completely. Let's execute
+
+```
+begin:1
+>>> 3ce43dc1-7397-4ab7-89ad-ecf70ebf681a
+3ce43dc1-7397-4ab7-89ad-ecf70ebf681a/video:/coins.mp4
+...
+
+quit
+```
+
+So, it works.
+
+#REST
