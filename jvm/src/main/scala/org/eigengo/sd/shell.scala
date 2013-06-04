@@ -13,45 +13,30 @@ object Shell extends App with Core with ConfigCoreConfiguration {
   import akka.actor.ActorDSL._
   import Utils._
 
-  val printliner = actor(new Act {
-    become {
-      case x => println(">>> " + x)
-    }
-  })
+  implicit val _ = actor(new Act {
+      become {
+        case x => println(">>> " + x)
+      }
+    })
 
   @tailrec
   private def commandLoop(): Unit = {
-    implicit val sender = printliner
-
     Console.readLine() match {
-      case QuitCommand =>
-        system.shutdown()
+      case QuitCommand                => return
+      case BeginCommand(count)        => coordinator ! Begin(count.toInt)
+      case GetSessionsCommand         => coordinator ! GetSessions
+      case ImageCommand(id, fileName) => coordinator ! SingleImage(id, readAll(fileName), true)
+      case VideoCommand(id, fileName) => readChunks(fileName, 64)(coordinator ! FrameChunk(id, _, true))
+      case GetInfoCommand(id)         => coordinator ! GetInfo(id)
 
-      case BeginCommand(count) =>
-        coordinator ! Begin(count.toInt)
-        commandLoop()
-      case GetSessionsCommand =>
-         coordinator ! GetSessions
-         commandLoop()
-
-      case ImageCommand(id, fileName) =>
-        val data = readAll(fileName)
-        coordinator ! SingleImage(id, data, true)
-        commandLoop()
-      case VideoCommand(id, fileName) =>
-        readChunks(fileName, 64)(coordinator ! FrameChunk(id, _, true))
-        commandLoop()
-      case GetInfoCommand(id) =>
-        coordinator ! GetInfo(id)
-        commandLoop()
-
-      case _ =>
-        println("??!!")
-        commandLoop()
+      case _                          => println("WTF??!!")
     }
+
+    commandLoop()
   }
 
   commandLoop()
+  system.shutdown()
 }
 
 object Commands {
@@ -59,9 +44,9 @@ object Commands {
   val BeginCommand       = "begin:(\\d+)".r
   val GetSessionsCommand = "ls"
 
-  val ImageCommand       = "([0-9a-z\\-]*)/image:?(.*)".r
-  val VideoCommand       = "([0-9a-z\\-]*)/video:?(.*)".r
-  val GetInfoCommand     = "([0-9a-z\\-]*)".r
+  val ImageCommand       = "([0-9a-z\\-]{36})/image:?(.*)".r
+  val VideoCommand       = "([0-9a-z\\-]{36})/video:?(.*)".r
+  val GetInfoCommand     = "([0-9a-z\\-]{36})".r
   val QuitCommand        = "quit"
 
 }
@@ -85,7 +70,7 @@ object Utils {
     @tailrec
     def read(is: InputStream): Unit = {
       val buffer = Array.ofDim[Byte](16000)
-      Thread.sleep(buffer.length / kbps)   // simluate slow input
+      Thread.sleep(buffer.length / kbps)   // simulate slow input :(
       val len = is.read(buffer)
       if (len > 0) {
         f(buffer)

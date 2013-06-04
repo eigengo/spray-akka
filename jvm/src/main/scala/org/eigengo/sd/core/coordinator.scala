@@ -35,7 +35,7 @@ class CoordinatorActor(amqpConnection: ActorRef) extends Actor {
     case FrameChunk(id, chunk, start) =>
       sessionActorFor(id).tell(RecogSessionActor.Frame(chunk, start), sender)
     case GetSessions =>
-      sender ! context.children.map(_.path.name).toList
+      sender ! context.children.filter(jabber !=).map(_.path.name).toList
   }
 
   def sessionActorFor(id: String): ActorRef = context.actorFor(id)
