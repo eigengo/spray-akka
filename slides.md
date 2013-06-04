@@ -429,7 +429,30 @@ private[core] class RecogSessionActor(amqpConnection: ActorRef, jabberActor: Act
 }
 ```
 
-Right ho. We can now send the images to the components on the other end of RabbitMQ.
+#Stopping
+But wait? When **do** we stop? Intuitively, we sould like to stop this actor when we encounter a state timout or when we complete. That can all be defined as behaviour on transitions.
+
+```scala
+private[core] class RecogSessionActor(amqpConnection: ActorRef, jabberActor: ActorRef) extends Actor with
+  FSM[RecogSessionActor.State, RecogSessionActor.Data] {
+
+  ...
+
+  // cleanup
+  onTransition {
+    case _ -> Aborted =>
+      println("Aborting!")
+      context.stop(self)
+    case _ -> Completed =>
+      println("Done!")
+      context.stop(self)
+  }
+
+  ...
+}
+```
+
+Right ho. We can now write the code to send the images to the components on the other end of RabbitMQ.
 
 #Sending images
 The recognition can deal with H.264 stream as well as individual images, but once you've sent the first frame of the stream or the first image, you must keep sending more frames or more images. In other words, you cannot combine H.264 and static frames.
@@ -676,8 +699,8 @@ I happen to have my iPhone here with the app installed; and I've pre-recorded a 
 
 #Done
 
-[@honzam399](https://twitter.com/honzam399)
-[janm@cakesolutions.net](mailto:janm@cakesolutions.net)
-[cakesolutions.net](http://www.cakesolutions.net)
-[github.com/janm399](https://github.com/janm399)
+[@honzam399](https://twitter.com/honzam399) |
+[janm@cakesolutions.net](mailto:janm@cakesolutions.net) |
+[cakesolutions.net](http://www.cakesolutions.net) |
+[github.com/janm399](https://github.com/janm399) |
 [github.com/eigengo](https://github.com/eigengo)
