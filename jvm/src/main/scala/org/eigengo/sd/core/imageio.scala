@@ -98,8 +98,9 @@ class H264DecoderContext[U](f: Array[Byte] => U) extends VideoDecoderContext {
 }
 
 class TemporaryFile {
-  //val file: File = File.createTempFile("video", "mp4")
-  val file: File = new File("/Users/janmachacek/x.mp4")
+  val file: File = File.createTempFile("video", "mp4")
+  file.deleteOnExit()
+//  val file: File = new File("/Users/janmachacek/x.mp4")
   var open: Boolean = true
   private val fos: FileOutputStream = new FileOutputStream(file)
 
