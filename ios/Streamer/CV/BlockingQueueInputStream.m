@@ -100,12 +100,12 @@
 	if (dataLen > len) {
 		NSLog(@"len = %d", len);
 		NSMutableData *newData = [NSMutableData dataWithData:chunkHeader];
-		[newData appendData:[data subdataWithRange:NSMakeRange(len, dataLen - len)]];
-		if (newData.length > chunkSize) {
+		if (newData.length - chunkHeader.length - 1 > chunkSize) {
 			[newData appendData:mid];
 		} else {
 			[newData appendData:end];
 		}
+		[newData appendData:[data subdataWithRange:NSMakeRange(len, dataLen - len)]];
 		data = newData;
 		dispatch_semaphore_signal(readLock);
 	} else {
