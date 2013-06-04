@@ -69,7 +69,7 @@
 		UIImage *image = [UIImage imageWithCGImage:newImage];
 		image = [self convertImageToGrayScale:image];
 		image = [self imageWithImage:image scaledToSize:CGSizeMake(600, 400)];
-		NSData *jpeg = UIImageJPEGRepresentation(image, 0.2);
+		NSData *jpeg = UIImageJPEGRepresentation(image, 0.3);
 		
 		success(jpeg);
 	}
