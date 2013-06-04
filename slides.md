@@ -28,15 +28,15 @@ The main components:
 We support multiple recognition sessions; each session maintains its own state. The session _coordinator_ starts new sessions and routes request to existing sessions.
 
 ```
-            [ Begin(params) ]
-??? ----->  [ SingleImage(id, ...) ]  -----> [[ coordinator ]]
-            [ FrameChunk(id, ...) ]                 |
-                                               +----+----+
+            ( Begin(params)        )
+??? ----->  ( SingleImage(id, ...) )  -----> [[ Coordinator ]]
+            ( FrameChunk(id, ...)  )                |
+                                               +----+----+---- [[ Jabber ]]
                                                |         | 
                                        ...  [[ S ]]   [[ S ]]  ...
-                                               |
-                                               |
-                                            [[ A ]]
+                                               |         |
+                                               |         |
+                                            [[ A ]]   [[ A ]]
 ```
 
 The coordinator receives the ``Begin`` message and creates a _session actor_, passing it the _jabber actor_; the _session actor_ in turn creates connection to RabbitMQ. On receiving the ``Begin`` message, the _session actor_ replies to the sender with the id of the session.
