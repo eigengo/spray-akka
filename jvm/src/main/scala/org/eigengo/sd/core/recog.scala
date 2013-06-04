@@ -1,7 +1,7 @@
 package org.eigengo.sd.core
 
 import akka.actor._
-import scala.concurrent.Future
+import scala.concurrent.{ExecutionContext, Future}
 import com.rabbitmq.client.AMQP
 import com.github.sstone.amqp.{ConnectionOwner, RpcClient}
 import akka.util.Timeout
@@ -12,7 +12,7 @@ import com.github.sstone.amqp.RpcClient.Request
 import com.github.sstone.amqp.Amqp.Delivery
 import spray.json.{JsonParser, JsonReader, DefaultJsonProtocol}
 
-object RecogSessionActor {
+private[core] object RecogSessionActor {
 
   // receive image to be processed
   private[core] case class Image(image: Array[Byte], end: Boolean)
@@ -60,32 +60,26 @@ private[core] class RecogSessionActor(amqpConnection: ActorRef, jabberActor: Act
   import scala.concurrent.duration._
   import context.dispatcher
 
-  // make a connection to the AMQP broker
-  val amqp = ConnectionOwner.createChildActor(amqpConnection, Props(new RpcClient()))
-
   // default timeout for all states
   val stateTimeout = 60.seconds
-
-  // our own id
-  lazy val selfId: String = self.path.name
 
   // thank goodness for British spelling :)
   val emptyBehaviour: StateFunction = { case _ => stay() }
 
-  def countCoins(minCoins: Int)(image: Array[Byte]): Unit =
-    amqpAsk[CoinResponse](amqp)("amq.direct", "count.key", mkImagePayload(image)) onSuccess {
-      case res => if (res.coins.size >= minCoins) jabberActor ! res
-    }
+  // make a connection to the AMQP broker
+  val amqp = ConnectionOwner.createChildActor(amqpConnection, Props(new RpcClient()))
 
   // we start idle and empty and then progress through the states
   startWith(Idle, Empty)
 
+  // when we receive the ``Begin`` even when idle, we become ``Active``
   when(Idle, stateTimeout) {
     case Event(Begin(minCoins), _) =>
-      sender ! selfId
+      sender ! self.path.name
       goto(Active) using Running(minCoins, None)
   }
 
+  // when ``Active``, we can process images and frames
   when(Active, stateTimeout) {
     case Event(Image(image, end), r@Running(minCoins, None)) if image.length > 0  =>
       val decoder = new NoopDecoderContext(countCoins(minCoins))
@@ -137,17 +131,20 @@ private[core] class RecogSessionActor(amqpConnection: ActorRef, jabberActor: Act
   override def postStop() {
     context.stop(amqp)
   }
+
+  def countCoins(minCoins: Int)(image: Array[Byte]): Unit =
+    amqpAsk[CoinResponse](amqp)("amq.direct", "count.key", mkImagePayload(image)) onSuccess {
+      case res => if (res.coins.size >= minCoins) jabberActor ! res
+    }
 }
 
 private[core] trait AmqpOperations {
-  this: Actor =>
 
-  protected def amqpAsk[A : JsonReader](amqp: ActorRef)
-                       (exchange: String, routingKey: String, payload: Array[Byte]): Future[A] = {
+  protected def amqpAsk[A](amqp: ActorRef)
+                       (exchange: String, routingKey: String, payload: Array[Byte])
+                       (implicit ctx: ExecutionContext, reader: JsonReader[A]): Future[A] = {
     import scala.concurrent.duration._
     import akka.pattern.ask
-    import context.dispatcher
-    val reader = implicitly[JsonReader[A]]
 
     val builder = new AMQP.BasicProperties.Builder
     implicit val timeout = Timeout(2.seconds)

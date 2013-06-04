@@ -78,7 +78,7 @@ trait Core {
 
   val amqpConnectionFactory: ConnectionFactory = new ConnectionFactory()
   amqpConnectionFactory.setHost("localhost")
-  
+
   val amqpConnection = system.actorOf(Props(new ConnectionOwner(amqpConnectionFactory)))
   val coordinator = system.actorOf(Props(new CoordinatorActor(amqpConnection)), "coordinator")
 }
@@ -170,6 +170,13 @@ When we receive the ``Begin`` message, the coordinator creates a new child actor
 ```scala
 private[core] class RecogSessionActor(amqpConnection: ActorRef, jabberActor: ActorRef) extends Actor with
   FSM[RecogSessionActor.State, RecogSessionActor.Data] with
+
+  import RecogSessionActor._
+  import scala.concurrent.duration._
+  import context.dispatcher
+
+  // default timeout for all states
+  val stateTimeout = 60.seconds
 
   // we start idle and empty and then progress through the states
   startWith(Idle, Empty)
@@ -316,3 +323,195 @@ object Shell extends App with Core with ConfigCoreConfiguration {
 ```
 
 #Recog session
+The recog session is an FSM actor; it moves through different states depending on the messages it receives; it also maintians timeouts--when the user abandons a session, the session actor will remove itself once the timeout elapses.
+
+```scala
+private[core] class RecogSessionActor(amqpConnection: ActorRef, jabberActor: ActorRef) extends Actor with
+  FSM[RecogSessionActor.State, RecogSessionActor.Data] {
+
+  import RecogSessionActor._
+  import scala.concurrent.duration._
+  import context.dispatcher
+
+  // default timeout for all states
+  val stateTimeout = 60.seconds
+
+  // thank goodness for British spelling :)
+  val emptyBehaviour: StateFunction = { case _ => stay() }
+
+  // we start idle and empty and then progress through the states
+  startWith(Idle, Empty)
+
+  // when we receive the ``Begin`` even when idle, we become ``Active``
+  when(Idle, stateTimeout) {
+    case Event(Begin(minCoins), _) =>
+      sender ! self.path.name
+      goto(Active) using Running(minCoins, None)
+  }
+
+  // when ``Active``, we can process images and frames
+  when(Active, stateTimeout) {
+    case Event(message, data) =>
+      goto(Completed)
+  }
+
+  // until we hit Aborted and Completed, which do nothing interesting
+  when(Aborted)(emptyBehaviour)
+  when(Completed)(emptyBehaviour)
+
+  // unhandled events in the states
+  whenUnhandled {
+    case Event(StateTimeout, _) => goto(Aborted)
+    case Event(GetInfo, _)      => sender ! "OK"; stay()
+  }
+
+  // go!
+  initialize
+}
+```
+
+Complicated? Yes. Difficult to write & understand? No! 
+
+#AMQP
+But we're counting coins in images! All we've seen so far is some data pushing in Scala. We need to connect our super-smart (T&Cs apply) compter vision code.
+
+It sits on the other end of RabbitMQ; when we send the broker a message to the ``amq.direct`` exchange, using the ``count.key`` routing key, it will get routed to the running native code. The native code will pick up the message, take its payload; perform the coin counting using the hough circles transform and reply back with a JSON:
+
+```json
+{ 
+   "coins":[{"center":123.3, "diameter":30.4}, {"center":400, "diameter":55}],
+   "succeeded":true
+}
+```
+
+In other words, we have the array of coins and indication whether we were able to successfully process the image.
+
+So, let's wire in the AMQP connector and send it the messages.
+
+#AMQP actor
+We create the ``amqp`` actor whenever we create the ``RecogSessionActor``.
+
+```scala
+private[core] class RecogSessionActor(amqpConnection: ActorRef, jabberActor: ActorRef) extends Actor with
+  FSM[RecogSessionActor.State, RecogSessionActor.Data] {
+
+  import RecogSessionActor._
+  import scala.concurrent.duration._
+  import context.dispatcher
+
+  // default timeout for all states
+  val stateTimeout = 60.seconds
+
+  // thank goodness for British spelling :)
+  val emptyBehaviour: StateFunction = { case _ => stay() }
+
+  // make a connection to the AMQP broker
+  val amqp = ConnectionOwner.createChildActor(amqpConnection, Props(new RpcClient()))
+
+  ...
+
+}
+```
+
+Because it is not a child of this actor (it is a child of the AMQP connection owner actor--don't ask!), we must remember to clean it up in the ``postStop()`` function.
+
+```scala
+private[core] class RecogSessionActor(amqpConnection: ActorRef, jabberActor: ActorRef) extends Actor with
+  FSM[RecogSessionActor.State, RecogSessionActor.Data] {
+
+  ...
+
+  // cleanup
+  override def postStop() {
+    context.stop(amqp)
+  }
+
+}
+```
+
+Right ho. We can now send the images to the components on the other end of RabbitMQ.
+
+#Sending images
+The recognition can deal with H.264 stream as well as individual images, but once you've sent the first frame of the stream or the first image, you must keep sending more frames or more images. In other words, you cannot combine H.264 and static frames.
+This means that we can set up the ``DecoderContext`` on first input and simply keep it in our FSM state.
+
+```scala
+private[core] class RecogSessionActor(amqpConnection: ActorRef, jabberActor: ActorRef) extends Actor with
+  FSM[RecogSessionActor.State, RecogSessionActor.Data] {
+
+  ...
+  // when ``Active``, we can process images and frames
+  when(Active, stateTimeout) {
+    case Event(Image(image, end), r@Running(minCoins, None)) if image.length > 0  =>
+      val decoder = new NoopDecoderContext(countCoins(minCoins))
+      decoder.decode(image, end)
+      stay() using r.copy(decoder = Some(decoder))
+    case Event(Image(image, end), Running(minCount, Some(decoder: ImageDecoderContext))) if image.length > 0  =>
+      decoder.decode(image, end)
+      stay()
+    case Event(Image(_, _), Running(_, Some(decoder))) =>
+      decoder.close()
+      goto(Completed)
+
+    case Event(Frame(frame, _), r@Running(minCoins, None)) =>
+      val decoder = new H264DecoderContext(countCoins(minCoins))
+      decoder.decode(frame, true)
+      stay() using r.copy(decoder = Some(decoder))
+    case Event(Frame(frame, _), Running(minCount, Some(decoder: VideoDecoderContext))) if frame.length > 0 =>
+      decoder.decode(frame, true)
+      stay()
+    case Event(Frame(_, _), Running(_, Some(decoder))) =>
+      decoder.close()
+      goto(Completed)
+  }
+}
+```
+
+Now, the interesting function is the ``f: Array[Byte] => U`` function, which the current decoder calls when it has complete frame or image. Its job is to take the decoded frame and send it over RabbitMQ for processing.
+
+```scala
+private[core] class RecogSessionActor(amqpConnection: ActorRef, jabberActor: ActorRef) extends Actor with
+  FSM[RecogSessionActor.State, RecogSessionActor.Data] {
+
+  ...
+  // when ``Active``, we can process images and frames
+  when(Active, stateTimeout) {
+    case Event(Image(image, end), r@Running(minCoins, None)) if image.length > 0  =>
+      val decoder = new NoopDecoderContext(countCoins(minCoins))
+      decoder.decode(image, end)
+      stay() using r.copy(decoder = Some(decoder))
+    ...
+  }
+
+  def countCoins(minCoins: Int)(image: Array[Byte]): Unit =
+    amqpAsk(amqp)("amq.direct", "count.key", mkImagePayload(image)) onSuccess {
+      case res => if (res.coins.size >= minCoins) jabberActor ! res
+    }
+}
+```
+
+#Asking AMQP
+Let's keep peeling the onion and define the ``amqpAsk`` function. We'll put it in the ``AmqpOperations`` trait.
+
+```scala
+private[core] trait AmqpOperations {
+
+  protected def amqpAsk(amqp: ActorRef)
+                       (exchange: String, routingKey: String, payload: Array[Byte])
+                       (implicit ctx: ExecutionContext): Future[String] = {
+    import scala.concurrent.duration._
+    import akka.pattern.ask
+
+    val builder = new AMQP.BasicProperties.Builder
+    implicit val timeout = Timeout(2.seconds)
+
+    (amqp ? Request(Publish(exchange, routingKey, payload, Some(builder.build())) :: Nil)).map {
+      case Response(Delivery(_, _, _, body)::_) => new String(body)
+      case x => sys.error("Bad match " + x)
+    }
+  }
+
+}
+```
+
+Right. The ``amqp`` ``ActorRef`` behaves just like ordinary Akka actor, except it sends the message over AMQP. Mixed into our ``RecogSessionActor`` makes us ready to move on!
