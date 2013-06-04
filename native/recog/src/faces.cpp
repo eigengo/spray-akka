@@ -21,7 +21,9 @@ Face FaceCounter::fromRect(cv::Rect rect) {
 std::vector<Face> FaceCounter::countCpu(const cv::Mat &image) {
 	using namespace cv;
 	std::vector<Rect> objects;
-	faceClassifierCpu.detectMultiScale(image, objects, 1.1, 2, CV_HAAR_DO_ROUGH_SEARCH);
+	Mat gray;
+	cvtColor(image, gray, CV_RGB2GRAY);
+	faceClassifierCpu.detectMultiScale(gray, objects, 1.1, 2, CV_HAAR_DO_ROUGH_SEARCH);
 	std::vector<Face> faces;
 	for (auto i = objects.begin(); i != objects.end(); ++i) {
 		faces.push_back(fromRect(*i));
@@ -35,7 +37,7 @@ std::vector<Face> FaceCounter::countGpu(const cv::Mat &image) {
 	gpu::cvtColor(gpu::GpuMat(image), imageGpu, CV_RGB2GRAY);
 	gpu::GpuMat objectsGpu;
 	faceClassifierGpu.findLargestObject = false;
-	int count = faceClassifierGpu.detectMultiScale(imageGpu, objectsGpu);
+	int count = faceClassifierGpu.detectMultiScale(imageGpu, objectsGpu, 1.1);
 	
 	Mat objectsCpu;
 	// download only detected number of rectangles
@@ -51,6 +53,6 @@ std::vector<Face> FaceCounter::countGpu(const cv::Mat &image) {
 }
 
 std::vector<Face> FaceCounter::count(const cv::Mat &image) {
-	if (cv::gpu::getCudaEnabledDeviceCount() > 0) return countGpu(image);
+	//if (cv::gpu::getCudaEnabledDeviceCount() > 0) return countGpu(image);
 	return countCpu(image);
 }

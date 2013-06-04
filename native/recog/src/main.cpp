@@ -15,22 +15,29 @@ std::string Main::handleMessage(const AmqpClient::BasicMessage::ptr_t message, c
 	
 	Jzon::Object responseJson;
 	try {
-		Jzon::Array facesJson;
+		Jzon::Array coinsJson;
+		//Jzon::Array facesJson;
 		auto imageData = imageMessage.headImage();
 		auto imageMat = cv::imdecode(cv::Mat(imageData), 1);
 		// ponies & unicorns
-		auto faces = faceCounter.count(imageMat);
+		auto coins = coinCounter.count(imageMat);
 		
-		for (auto i = faces.begin(); i != faces.end(); ++i) {
-			auto face = *i;
+		for (auto i = coins.begin(); i != coins.end(); ++i) {
+			/*
 			Jzon::Object faceJson;
 			faceJson.Add("left", face.left);
 			faceJson.Add("top", face.top);
 			faceJson.Add("width", face.width);
 			faceJson.Add("height", face.height);
 			facesJson.Add(faceJson);
+			*/
+			Jzon::Object coinJson;
+			coinJson.Add("center", i->center);
+			coinJson.Add("radius", i->radius);
+			coinsJson.Add(coinJson);
 		}
-		responseJson.Add("faces", facesJson);
+		//responseJson.Add("faces", facesJson);
+		responseJson.Add("coins", coinsJson);
 		responseJson.Add("succeeded", true);
 	} catch (std::exception &e) {
 		// bantha poodoo!
@@ -44,11 +51,15 @@ std::string Main::handleMessage(const AmqpClient::BasicMessage::ptr_t message, c
 }
 
 void Main::inThreadInit() {
-	cv::gpu::setDevice(0);
+	using namespace cv::gpu;
+	int deviceCount = getCudaEnabledDeviceCount();
+	if (deviceCount > 0) {
+		setDevice(0);
+	}
 }
 
 int main(int argc, char** argv) {
 	Main main("count", "amq.direct", "count.key");
-	main.runAndJoin(1);
+	main.runAndJoin(8);
 	return 0;
 }
