@@ -35,7 +35,7 @@ std::vector<Face> FaceCounter::countGpu(const cv::Mat &image) {
 	gpu::cvtColor(gpu::GpuMat(image), imageGpu, CV_RGB2GRAY);
 	gpu::GpuMat objectsGpu;
 	faceClassifierGpu.findLargestObject = false;
-	int count = faceClassifierGpu.detectMultiScale(imageGpu, objectsGpu, 1.2);
+	int count = faceClassifierGpu.detectMultiScale(imageGpu, objectsGpu);
 	
 	Mat objectsCpu;
 	// download only detected number of rectangles

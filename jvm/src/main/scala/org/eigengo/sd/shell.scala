@@ -67,8 +67,10 @@ object Commands {
 }
 
 object Utils {
-  private def getFullFileName(fileName: String) =
-    s"/Users/janmachacek/Talks/scaladays2013/jvm/src/main/resources/$fileName"
+  private def getFullFileName(fileName: String) = {
+    getClass.getResource(fileName).getPath
+  }
+
 
   // Chuck Norris deals with all exceptions
   def readAll(fileName: String): Array[Byte] = {

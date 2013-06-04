@@ -49,6 +49,6 @@ void Main::inThreadInit() {
 
 int main(int argc, char** argv) {
 	Main main("count", "amq.direct", "count.key");
-	main.runAndJoin(8);
+	main.runAndJoin(1);
 	return 0;
 }
