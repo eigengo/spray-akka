@@ -13,9 +13,19 @@ TEST_F(CoinCounterTest, TwoCoins) {
 	EXPECT_EQ(2, counter.count(image).size());
 }
 
+TEST_F(CoinCounterTest, ThreeCoins) {
+	auto image = load("coins3.png");
+	EXPECT_EQ(3, counter.count(image).size());
+}
+
 TEST_F(CoinCounterTest, FourCoins) {
 	auto image = load("coins4.png");
 	EXPECT_EQ(4, counter.count(image).size());
+}
+
+TEST_F(CoinCounterTest, DamagedFrameWith2Coins) {
+	auto image = load("coins2_f1.png");
+	EXPECT_EQ(2, counter.count(image).size());
 }
 
 TEST_F(CoinCounterTest, NoCoins) {

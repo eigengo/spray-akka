@@ -12,16 +12,17 @@ std::vector<Coin> CoinCounter::countCpu(const cv::Mat &image) {
 	std::vector<Vec3f> circles;
 	
 	cvtColor(image, dst, CV_BGR2GRAY);
-	GaussianBlur(dst, dst, Size(3, 3), 2, 2);
+	GaussianBlur(dst, dst, Size(9, 9), 3, 3);
+	threshold(dst, dst, 150, 255, THRESH_BINARY);
+	GaussianBlur(dst, dst, Size(3, 3), 3, 3);
 	//Canny(dst, dst, 1000, 1700, 5);
-	//GaussianBlur(dst, dst, Size(3, 3), 3, 3);
 	HoughCircles(dst, circles, CV_HOUGH_GRADIENT,
 				 1,    // dp
 				 40,   // min dist
-				 200,  // canny1
-				 30,	   // canny2
-				 10,   // min radius
-				 200   // max radius
+				 100,  // canny1
+				 20,	   // canny2
+				 25,   // min radius
+				 100   // max radius
 				 );
 	
 	for (size_t i = 0; i < circles.size(); i++) {
