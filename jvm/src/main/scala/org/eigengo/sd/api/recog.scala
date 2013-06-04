@@ -36,7 +36,7 @@ class StreamingRecogService(coordinator: ActorRef) extends Actor {
     // begin a transaction
     case HttpRequest(HttpMethods.POST, RootUri, _, _, _) =>
       val client = sender
-      (coordinator ? Begin(2)).mapTo[String].onComplete {
+      (coordinator ? Begin(1)).mapTo[String].onComplete {
         case Success(sessionId) => client ! HttpResponse(entity = sessionId)
         case Failure(ex)        => client ! HttpResponse(entity = ex.getMessage, status = StatusCodes.InternalServerError)
       }

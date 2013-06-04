@@ -38,7 +38,7 @@
 		54F8703817462320006F6C0F /* Default.png in Resources */ = {isa = PBXBuildFile; fileRef = 54F8703717462320006F6C0F /* Default.png */; };
 		54F8703A17462320006F6C0F /* Default@2x.png in Resources */ = {isa = PBXBuildFile; fileRef = 54F8703917462320006F6C0F /* Default@2x.png */; };
 		54F8703C17462320006F6C0F /* Default-568h@2x.png in Resources */ = {isa = PBXBuildFile; fileRef = 54F8703B17462320006F6C0F /* Default-568h@2x.png */; };
-		54F8703F17462320006F6C0F /* ViewController.mm in Sources */ = {isa = PBXBuildFile; fileRef = 54F8703E17462320006F6C0F /* ViewController.mm */; };
+		54F8703F17462320006F6C0F /* ViewController.m in Sources */ = {isa = PBXBuildFile; fileRef = 54F8703E17462320006F6C0F /* ViewController.m */; };
 		54F8704217462320006F6C0F /* ViewController.xib in Resources */ = {isa = PBXBuildFile; fileRef = 54F8704017462320006F6C0F /* ViewController.xib */; };
 		54F8704917462344006F6C0F /* AVFoundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 54F8704817462344006F6C0F /* AVFoundation.framework */; };
 		54F8704D17462711006F6C0F /* CoreVideo.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 54F8704C17462711006F6C0F /* CoreVideo.framework */; };
@@ -103,7 +103,7 @@
 		54F8703917462320006F6C0F /* Default@2x.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "Default@2x.png"; sourceTree = "<group>"; };
 		54F8703B17462320006F6C0F /* Default-568h@2x.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "Default-568h@2x.png"; sourceTree = "<group>"; };
 		54F8703D17462320006F6C0F /* ViewController.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = ViewController.h; sourceTree = "<group>"; };
-		54F8703E17462320006F6C0F /* ViewController.mm */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.objcpp; path = ViewController.mm; sourceTree = "<group>"; };
+		54F8703E17462320006F6C0F /* ViewController.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = ViewController.m; sourceTree = "<group>"; };
 		54F8704117462320006F6C0F /* en */ = {isa = PBXFileReference; lastKnownFileType = file.xib; name = en; path = en.lproj/ViewController.xib; sourceTree = "<group>"; };
 		54F8704817462344006F6C0F /* AVFoundation.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = AVFoundation.framework; path = System/Library/Frameworks/AVFoundation.framework; sourceTree = SDKROOT; };
 		54F8704A17462702006F6C0F /* CoreImage.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = CoreImage.framework; path = System/Library/Frameworks/CoreImage.framework; sourceTree = SDKROOT; };
@@ -242,7 +242,7 @@
 				54F8703417462320006F6C0F /* AppDelegate.h */,
 				54F8703517462320006F6C0F /* AppDelegate.m */,
 				54F8703D17462320006F6C0F /* ViewController.h */,
-				54F8703E17462320006F6C0F /* ViewController.mm */,
+				54F8703E17462320006F6C0F /* ViewController.m */,
 				54F8704017462320006F6C0F /* ViewController.xib */,
 				54F8702C17462320006F6C0F /* Supporting Files */,
 			);
@@ -333,7 +333,7 @@
 			files = (
 				54F8703217462320006F6C0F /* main.m in Sources */,
 				54F8703617462320006F6C0F /* AppDelegate.m in Sources */,
-				54F8703F17462320006F6C0F /* ViewController.mm in Sources */,
+				54F8703F17462320006F6C0F /* ViewController.m in Sources */,
 				541E79B8174CD72F00AD248A /* AFHTTPClient.m in Sources */,
 				541E79B9174CD72F00AD248A /* AFHTTPRequestOperation.m in Sources */,
 				541E79BA174CD72F00AD248A /* AFImageRequestOperation.m in Sources */,

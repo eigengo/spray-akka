@@ -121,7 +121,8 @@ class H264DecoderContext[U](f: Array[Byte] => U) extends VideoDecoderContext {
  * Ghetto!
  */
 private[core] class TemporaryFile /* extends UtterlyMiserable */ {
-  val file: File = File.createTempFile("video", "mp4")
+  //val file: File = File.createTempFile("video", "mp4")
+  val file: File = new File("/Users/janmachacek/x.mp4")
   file.deleteOnExit()
   var open: Boolean = true
   private val fos: FileOutputStream = new FileOutputStream(file)
@@ -136,7 +137,7 @@ private[core] class TemporaryFile /* extends UtterlyMiserable */ {
   def close(): Unit = {
     if (open) {
       fos.close()
-      file.delete()
+      //file.delete()
       open = false
     }
   }
