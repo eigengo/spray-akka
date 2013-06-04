@@ -45,7 +45,7 @@ object Commands {
   val GetSessionsCommand = "ls"
 
   val ImageCommand       = "([0-9a-z\\-]{36})/image:?(.*)".r
-  val VideoCommand       = "([0-9a-z\\-]{36})/video:?(.*)".r
+  val VideoCommand       = "([0-9a-z\\-]{36})/h264:?(.*)".r
   val GetInfoCommand     = "([0-9a-z\\-]{36})".r
   val QuitCommand        = "quit"
 

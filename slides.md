@@ -609,7 +609,7 @@ We should be able to us the shell completely. Let's execute
 ```
 begin:1
 >>> 3ce43dc1-7397-4ab7-89ad-ecf70ebf681a
-3ce43dc1-7397-4ab7-89ad-ecf70ebf681a/video:/coins.mp4
+3ce43dc1-7397-4ab7-89ad-ecf70ebf681a/h264:/coins.mp4
 ...
 
 quit
