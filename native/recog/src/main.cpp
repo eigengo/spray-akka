@@ -19,14 +19,16 @@ std::string Main::handleMessage(const AmqpClient::BasicMessage::ptr_t message, c
 		auto imageData = imageMessage.headImage();
 		auto imageMat = cv::imdecode(cv::Mat(imageData), 1);
 		// ponies & unicorns
-		auto coins = coinCounter.count(imageMat);
+		auto faces = faceCounter.count(imageMat);
 		
-		for (auto i = coins.begin(); i != coins.end(); ++i) {
-			auto coin = *i;
-			Jzon::Object coinJson;
-			coinJson.Add("center", coin.center);
-			coinJson.Add("radius", coin.radius);
-			coinsJson.Add(coinJson);
+		for (auto i = faces.begin(); i != faces.end(); ++i) {
+			auto face = *i;
+			Jzon::Object faceJson;
+			faceJson.Add("left", face.left);
+			faceJson.Add("top", face.top);
+			faceJson.Add("width", face.width);
+			faceJson.Add("height", face.height);
+			coinsJson.Add(faceJson);
 		}
 		responseJson.Add("coins", coinsJson);
 		responseJson.Add("succeeded", true);

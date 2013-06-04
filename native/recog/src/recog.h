@@ -7,7 +7,7 @@ namespace eigengo { namespace akka {
 	enum Feature {
 		//Circle,
 		//Square,
-		Face
+		FaceFeature
 	};
 
 	class Recogniser {

@@ -1,7 +1,7 @@
 set(test_EXECUTABLE recog-test)
 include_directories(${gtest_SOURCE_DIR}/include ${gtest_SOURCE_DIR} ${PROJECT_SOURCE_DIR} "${PROJECT_SOURCE_DIR}/..")
 
-add_executable(${test_EXECUTABLE} recog.cpp count.cpp preflight.cpp ../src/recog.cpp ../src/preflight.cpp ../src/count.cpp)
+add_executable(${test_EXECUTABLE} recog.cpp coins.cpp faces.cpp preflight.cpp ../src/recog.cpp ../src/preflight.cpp ../src/coins.cpp ../src/faces.cpp)
 
 target_link_libraries(${test_EXECUTABLE} ${Rabbitmqc_LIBRARY} ${Boost_LIBRARIES} ${SimpleAmqpClient_LIBRARY} ${OpenCV_LIBS} gtest gtest_main)
 

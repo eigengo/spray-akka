@@ -1,19 +1,19 @@
 #include "rtest.h"
-#include "count.h"
+#include "coins.h"
 
 using namespace eigengo::akka;
 
-class CounterTest : public OpenCVTest {
+class CoinCounterTest : public OpenCVTest {
 protected:
 	CoinCounter counter;
 };
 
-TEST_F(CounterTest, ThreeCoins) {
+TEST_F(CoinCounterTest, ThreeCoins) {
 	auto image = load("coins3.png");
 	EXPECT_EQ(3, counter.count(image).size());
 }
 
-TEST_F(CounterTest, NoCoins) {
+TEST_F(CoinCounterTest, NoCoins) {
 	auto image = load("f.jpg");
 	EXPECT_EQ(0, counter.count(image).size());
 }

@@ -4,7 +4,7 @@ using namespace eigengo::akka;
 using namespace cv;
 
 Recogniser::Recogniser() {
-	if (!faceClassifier.load("face_cascade.xml")) throw "misconfigured";
+	if (!faceClassifier.load("face_cascade.xml")) throw std::exception();
 }
 
 bool Recogniser::recogniseFace(const cv::Mat &image) {
@@ -15,7 +15,7 @@ bool Recogniser::recogniseFace(const cv::Mat &image) {
 
 bool Recogniser::recognise(const cv::Mat &image, const Feature feature) {
 	switch (feature) {
-		case Face:
+		case FaceFeature:
 			return recogniseFace(image);
 		default:
 			return false;

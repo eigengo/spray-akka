@@ -10,10 +10,10 @@ protected:
 
 TEST_F(RecogniserTest, NoFace) {
 	auto image = load("tbsit2.png");
-	EXPECT_FALSE(recogniser.recognise(image, Face));
+	EXPECT_FALSE(recogniser.recognise(image, FaceFeature));
 }
 
 TEST_F(RecogniserTest, Face) {
 	auto image = load("f.jpg");
-	EXPECT_TRUE(recogniser.recognise(image, Face));
+	EXPECT_TRUE(recogniser.recognise(image, FaceFeature));
 }
