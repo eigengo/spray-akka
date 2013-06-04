@@ -1,5 +1,5 @@
 #include "rtest.h"
-#include "coins.h"
+#include "faces.h"
 
 using namespace eigengo::akka;
 
@@ -8,12 +8,12 @@ protected:
 	FaceCounter counter;
 };
 
-TEST_F(FaceCounterTest, ThreeCoins) {
+TEST_F(FaceCounterTest, ThreeFaces) {
 	auto image = load("faces3.png");
 	EXPECT_EQ(3, counter.count(image).size());
 }
 
-TEST_F(FaceCounterTest, NoCoins) {
-	auto image = load("x.jpg");
+TEST_F(FaceCounterTest, NoFaces) {
+	auto image = load("xb.jpg");
 	EXPECT_EQ(0, counter.count(image).size());
 }

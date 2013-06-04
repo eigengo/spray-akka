@@ -14,6 +14,6 @@ TEST_F(CoinCounterTest, ThreeCoins) {
 }
 
 TEST_F(CoinCounterTest, NoCoins) {
-	auto image = load("f.jpg");
+	auto image = load("xb.jpg");
 	EXPECT_EQ(0, counter.count(image).size());
 }
