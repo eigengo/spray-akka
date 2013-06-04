@@ -465,7 +465,7 @@ private[core] class RecogSessionActor(amqpConnection: ActorRef, jabberActor: Act
   ...
   // when ``Active``, we can process images and frames
   when(Active, stateTimeout) {
-    case Event(Image(image, end), r@Running(minCoins, None)) if image.length > 0  =>
+    case Event(Image(image, end), r@Running(minCoins, None)) =>
       val decoder = new NoopDecoderContext(countCoins(minCoins))
       decoder.decode(image, end)
       stay() using r.copy(decoder = Some(decoder))
