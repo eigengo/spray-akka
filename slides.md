@@ -8,11 +8,13 @@ We have a video with coins on a table. We want to process the video, count the c
 
 In summary, we are building this system:
 
+```
 H.264 -- (HTTP) --> Scala/Akka -- (AMQP) --> C++/CUDA 
                         |                       |
                         +<------- (AMQP) -------+
                         |
                         +------- (Jabber) ------> 
+```
 
 The main components:
 
