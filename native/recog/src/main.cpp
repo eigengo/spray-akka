@@ -15,7 +15,7 @@ std::string Main::handleMessage(const AmqpClient::BasicMessage::ptr_t message, c
 	
 	Jzon::Object responseJson;
 	try {
-		Jzon::Array coinsJson;
+		Jzon::Array facesJson;
 		auto imageData = imageMessage.headImage();
 		auto imageMat = cv::imdecode(cv::Mat(imageData), 1);
 		// ponies & unicorns
@@ -28,9 +28,9 @@ std::string Main::handleMessage(const AmqpClient::BasicMessage::ptr_t message, c
 			faceJson.Add("top", face.top);
 			faceJson.Add("width", face.width);
 			faceJson.Add("height", face.height);
-			coinsJson.Add(faceJson);
+			facesJson.Add(faceJson);
 		}
-		responseJson.Add("coins", coinsJson);
+		responseJson.Add("faces", facesJson);
 		responseJson.Add("succeeded", true);
 	} catch (std::exception &e) {
 		// bantha poodoo!

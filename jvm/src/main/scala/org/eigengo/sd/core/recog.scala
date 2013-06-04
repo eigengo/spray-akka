@@ -35,15 +35,15 @@ object RecogSessionActor {
   private[core] case class Running(minCoins: Int, decoder: Option[DecoderContext]) extends Data
 
   // CV responses
-  private[core] case class Coin(center: Double, radius: Double)
-  private[core] case class CoinResponse(coins: List[Coin], succeeded: Boolean)
+  private[core] case class Face(left: Double, top: Double, width: Double, height: Double)
+  private[core] case class FacesResponse(faces: List[Face], succeeded: Boolean)
 }
 
 trait RecogSessionActorFormats extends DefaultJsonProtocol {
   import RecogSessionActor._
 
-  implicit val CoinFormat = jsonFormat2(Coin)
-  implicit val CoinResponseFormat = jsonFormat2(CoinResponse)
+  implicit val CoinFormat = jsonFormat4(Face)
+  implicit val CoinResponseFormat = jsonFormat2(FacesResponse)
 }
 
 private[core] class RecogSessionActor(amqpConnection: ActorRef, jabberActor: ActorRef) extends Actor with
@@ -70,7 +70,7 @@ private[core] class RecogSessionActor(amqpConnection: ActorRef, jabberActor: Act
   val emptyBehaviour: StateFunction = { case _ => stay() }
 
   def countCoins(image: Array[Byte]): Unit =
-    amqpAsk[CoinResponse](amqp)("amq.direct", "count.key", mkImagePayload(image)) onSuccess {
+    amqpAsk[FacesResponse](amqp)("amq.direct", "count.key", mkImagePayload(image)) onSuccess {
       case res => jabberActor ! res
     }
 
