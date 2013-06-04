@@ -19,10 +19,8 @@
 - (void)submitFrameRaw:(NSData *)rawFrame;
 @end
 
-@interface AbstractStreamingCVServerConnectionInput : AbstractCVServerConnectionInput {
-@protected
-	NSData* marker;
-}
+@interface AbstractStreamingCVServerConnectionInput : AbstractCVServerConnectionInput
+- (NSData*)marker;
 - (void)initConnectionInput;
 - (void)submitFrameRaw:(NSData*)rawFrame;
 - (void)stopRunning;
@@ -178,12 +176,19 @@
 	bool encoding;
 }
 
+- (NSData*)marker {
+	return [@" " dataUsingEncoding:NSASCIIStringEncoding];
+}
+
 - (void)initConnectionInput {
 	stats.networkBytes = 0;
 	stats.requestCount = 1;
 	stats.networkTime = 0;
 	
-	stream = [[BlockingQueueInputStream alloc] init];
+	NSData* sessionIdData = [sessionId dataUsingEncoding:NSASCIIStringEncoding];
+	NSMutableData *chunkHeader = [NSMutableData dataWithData:sessionIdData];
+	[chunkHeader appendData:[self marker]];
+	stream = [[BlockingQueueInputStream alloc] initWithChunkHeader:chunkHeader];
 	
 	NSMutableURLRequest *request = [NSMutableURLRequest requestWithURL:url];
 	[request setTimeoutInterval:30.0];
@@ -200,11 +205,10 @@
 }
 
 - (void)transportData:(NSData*)frame {
-	NSData* sessionIdData = [sessionId dataUsingEncoding:NSASCIIStringEncoding];
-	NSMutableData *frameWithSessionId = [NSMutableData dataWithData:sessionIdData];
-	[frameWithSessionId appendData:marker];
-	[frameWithSessionId appendData:frame];
-	[stream appendData:frameWithSessionId];
+	[stream appendData:frame];
+	
+	stats.networkBytes += frame.length;
+	stats.requestCount += 1;
 }
 
 - (void)submitFrameRaw:(NSData *)rawFrame {
@@ -225,9 +229,12 @@
 	AVEncoder* encoder;
 }
 
+- (NSData*)marker {
+	return [@"H" dataUsingEncoding:NSASCIIStringEncoding];
+}
+
 - (void)initConnectionInput {
 	[super initConnectionInput];
-	marker = [@"H" dataUsingEncoding:NSASCIIStringEncoding];
 	
 	encoder = [AVEncoder encoderForHeight:480 andWidth:720];
 	[encoder encodeWithBlock:^int(NSArray *data, double pts) {
@@ -252,9 +259,12 @@
 	ImageEncoder *imageEncoder;
 }
 
-- (void)initConnectionInput {
-	marker = [@"M" dataUsingEncoding:NSASCIIStringEncoding];
+- (NSData*)marker {
+	return [@"M" dataUsingEncoding:NSASCIIStringEncoding];
+}
 
+- (void)initConnectionInput {
+	[super initConnectionInput];
 	imageEncoder = [[ImageEncoder alloc] init];
 }
 

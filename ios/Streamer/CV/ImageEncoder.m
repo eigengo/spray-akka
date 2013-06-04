@@ -38,8 +38,8 @@
 	if (accepted) {
 		// scale & save
 		UIImage *image = [UIImage imageWithCGImage:newImage];
-		[self imageWithImage:image scaledToSize:CGSizeMake(640, 452)];
-		NSData *jpeg = UIImageJPEGRepresentation(image, 0.5);
+//		[self imageWithImage:image scaledToSize:CGSizeMake(640, 452)];
+		NSData *jpeg = UIImageJPEGRepresentation(image, 0.2);
 		
 		success(jpeg);
 	}

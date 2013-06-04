@@ -37,25 +37,27 @@ class StreamingRecogService(coordinator: ActorRef) extends Actor {
 
     // stream to /recog/mjpeg/:id
     case ChunkedRequestStart(HttpRequest(HttpMethods.POST, MJPEGUri(sessionId), _, entity, _)) =>
-      coordinator ! SingleImage(sessionId, entity.buffer)
-    // stream to /recog/h264/:id
+      coordinator ! SingleImage(sessionId, entity.buffer, false)
+      // stream to /recog/h264/:id
     case ChunkedRequestStart(HttpRequest(HttpMethods.POST, H264Uri(sessionId), _, entity, _)) =>
-      coordinator ! FrameChunk(sessionId, entity.buffer)
+      coordinator ! FrameChunk(sessionId, entity.buffer, false)
     case MessageChunk(body, extensions) =>
       // parse the body
-      val frame = Array.ofDim[Byte](body.length - 37)
-      Array.copy(body, 37, frame, 0, frame.length)
+      val frame = Array.ofDim[Byte](body.length - 38)
+      Array.copy(body, 38, frame, 0, frame.length)
 
       val sessionId = new String(body, 0, 36)
       val marker    = body(36)
-      val message   = if (marker == 'H') FrameChunk(sessionId, frame) else SingleImage(sessionId, frame)
+      val end       = body(37) == 'E'
+
+      val message   = if (marker == 'H') FrameChunk(sessionId, frame, end) else SingleImage(sessionId, frame, end)
       coordinator   ! message
     case ChunkedMessageEnd(extensions, trailer) =>
       sender ! HttpResponse(entity = "{}")
 
     // POST to /recog/static/:id
     case HttpRequest(HttpMethods.POST, StaticUri(sessionId), _, entity, _) =>
-      coordinator ! SingleImage(sessionId, entity.buffer)
+      coordinator ! SingleImage(sessionId, entity.buffer, true)
 
     // POST to /recog/rtsp/:id
     case HttpRequest(HttpMethods.POST, RtspUri(sessionId), _, entity, _) =>

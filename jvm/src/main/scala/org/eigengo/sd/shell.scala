@@ -36,10 +36,10 @@ object Shell extends App with Core {
 
       case ImageCommand(id, fileName) =>
         val data = readAll(fileName)
-        coordinator ! SingleImage(id, data)
+        coordinator ! SingleImage(id, data, true)
         commandLoop()
       case VideoCommand(id, fileName) =>
-        readChunks(fileName, 128)(coordinator ! FrameChunk(id, _))
+        readChunks(fileName, 128)(coordinator ! FrameChunk(id, _, true))
         commandLoop()
       case GetInfoCommand(id) =>
         coordinator ! GetInfo(id)

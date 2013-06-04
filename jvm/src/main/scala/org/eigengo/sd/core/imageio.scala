@@ -6,20 +6,33 @@ import java.io.{FileOutputStream, File, FileInputStream, ByteArrayOutputStream}
 import java.nio.channels.ReadableByteChannel
 import java.nio.ByteBuffer
 import java.util.concurrent.Semaphore
+import scala.collection.mutable.ArrayBuffer
 
 sealed trait DecoderContextType
 case object VideoDecoderContextType extends DecoderContextType
 case object ImageDecoderContextType extends DecoderContextType
 
 trait DecoderContext {
-  def decode(chunk: Array[Byte])
+  def decode(chunk: Array[Byte], end: Boolean)
   def close()
 }
 trait VideoDecoderContext extends DecoderContext
 trait ImageDecoderContext extends DecoderContext
 
 case class NoopDecoderContext[U](f: Array[Byte] => U) extends ImageDecoderContext {
-  def decode(chunk: Array[Byte]) { f(chunk) }
+  val buffer: ArrayBuffer[Byte] = ArrayBuffer()
+
+  def decode(chunk: Array[Byte], end: Boolean) {
+    if (buffer.isEmpty && end) {
+      f(chunk)
+    } else {
+      buffer ++= chunk
+      if (end) {
+        f(buffer.toArray)
+        buffer clear()
+      }
+    }
+  }
 
   def close(): Unit = {}
 }
@@ -49,7 +62,7 @@ class H264DecoderContext[U](f: Array[Byte] => U) extends VideoDecoderContext {
     isOpen
   }
 
-  def decode(chunk: Array[Byte]): Unit = {
+  def decode(chunk: Array[Byte], end: Boolean): Unit = {
     tf.write(chunk)
 
     tf.run {

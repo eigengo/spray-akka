@@ -3,16 +3,23 @@
 @implementation BlockingQueueInputStream {
     NSStreamStatus streamStatus;
     id <NSStreamDelegate> delegate;
+	NSData *end;
+	NSData *mid;
+	int chunkSize;
 }
 
-- (id)init {
+- (id)initWithChunkHeader:(NSData *)aChunkHeader {
     self = [super init];
     if (self) {
         // Initialization code here.
         streamStatus = NSStreamStatusNotOpen;
 		readLock = dispatch_semaphore_create(0);
 		writeLock = dispatch_semaphore_create(1);
-		_data = nil;
+		data = nil;
+		chunkHeader = aChunkHeader;
+		end = [@"E" dataUsingEncoding:NSASCIIStringEncoding];
+		mid = [@"M" dataUsingEncoding:NSASCIIStringEncoding];
+		chunkSize = 16000;
     }
     
     return self;
@@ -62,9 +69,16 @@
     return nil;
 }
 
-- (void)appendData:(NSData *)data {
+- (void)appendData:(NSData *)aData {
 	dispatch_semaphore_wait(writeLock, DISPATCH_TIME_FOREVER);
-	_data = data;
+	NSMutableData *newData = [NSMutableData dataWithData:chunkHeader];
+	if (aData.length > chunkSize) {
+		[newData appendData:mid];
+	} else {
+		[newData appendData:end];
+	}
+	[newData appendData:aData];
+	data = newData;
 	dispatch_semaphore_signal(readLock);
 }
 
@@ -76,15 +90,22 @@
 	dispatch_semaphore_wait(readLock, DISPATCH_TIME_FOREVER);
 	if (streamStatus != NSStreamStatusOpen) return -1;
 	
-	NSUInteger dataLen = [_data length];
+	NSUInteger dataLen = [data length];
 	NSUInteger readLen = MIN(dataLen, len);
-	uint8_t* dataBuffer = (uint8_t*)[_data bytes];
+	uint8_t* dataBuffer = (uint8_t*)[data bytes];
 	for (NSUInteger i = 0; i < readLen; i++) {
 		buffer[i] = dataBuffer[i];
 	}
 	
 	if (dataLen > len) {
-		_data = [_data subdataWithRange:NSMakeRange(len, dataLen - len)];
+		NSMutableData *newData = [NSMutableData dataWithData:chunkHeader];
+		[newData appendData:[data subdataWithRange:NSMakeRange(len, dataLen - len)]];
+		if (newData.length > chunkSize) {
+			[newData appendData:mid];
+		} else {
+			[newData appendData:end];
+		}
+		data = newData;
 		dispatch_semaphore_signal(readLock);
 	} else {
 		dispatch_semaphore_signal(writeLock);

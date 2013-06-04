@@ -7,10 +7,10 @@ import akka.routing.FromConfig
 object CoordinatorActor {
 
   // Single ``image`` to session ``id``
-  case class SingleImage(id: String, image: Array[Byte])
+  case class SingleImage(id: String, image: Array[Byte], end: Boolean)
 
   // Chunk of H.264 stream to session ``id``
-  case class FrameChunk(id: String, chunk: Array[Byte])
+  case class FrameChunk(id: String, chunk: Array[Byte], end: Boolean)
 
   // list ids of all sessions
   case object GetSessions
@@ -30,10 +30,10 @@ class CoordinatorActor(amqpConnection: ActorRef) extends Actor {
       rsa.forward(b)
     case GetInfo(id) =>
       sessionActorFor(id).tell(RecogSessionActor.GetInfo, sender)
-    case SingleImage(id, image) =>
-      sessionActorFor(id).tell(RecogSessionActor.Image(image), sender)
-    case FrameChunk(id, chunk) =>
-      sessionActorFor(id).tell(RecogSessionActor.Frame(chunk), sender)
+    case SingleImage(id, image, start) =>
+      sessionActorFor(id).tell(RecogSessionActor.Image(image, start), sender)
+    case FrameChunk(id, chunk, start) =>
+      sessionActorFor(id).tell(RecogSessionActor.Frame(chunk, start), sender)
     case GetSessions =>
       sender ! context.children.map(_.path.name).toList
   }

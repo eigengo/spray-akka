@@ -15,9 +15,9 @@ import spray.json.{JsonParser, JsonReader, DefaultJsonProtocol}
 object RecogSessionActor {
 
   // receive image to be processed
-  private[core] case class Image(image: Array[Byte]) extends AnyVal
+  private[core] case class Image(image: Array[Byte], end: Boolean)
   // receive chunk of a frame to be processed
-  private[core] case class Frame(frameChunk: Array[Byte]) extends AnyVal
+  private[core] case class Frame(frameChunk: Array[Byte], end: Boolean)
 
   // information about the running session
   private[core] case object GetInfo
@@ -87,25 +87,25 @@ private[core] class RecogSessionActor(amqpConnection: ActorRef, jabberActor: Act
   }
 
   when(Active, stateTimeout) {
-    case Event(Image(image), r@Running(minCount, None)) if image.length > 0  =>
+    case Event(Image(image, end), r@Running(minCount, None)) if image.length > 0  =>
       val decoder = new NoopDecoderContext(countCoins)
-      decoder.decode(image)
+      decoder.decode(image, end)
       stay() using r.copy(decoder = Some(decoder))
-    case Event(Image(image), Running(minCount, Some(decoder: ImageDecoderContext))) if image.length > 0  =>
-      decoder.decode(image)
+    case Event(Image(image, end), Running(minCount, Some(decoder: ImageDecoderContext))) if image.length > 0  =>
+      decoder.decode(image, end)
       stay()
-    case Event(Image(_), Running(_, Some(decoder))) =>
+    case Event(Image(_, _), Running(_, Some(decoder))) =>
       decoder.close()
       goto(Completed)
 
-    case Event(Frame(frame), r@Running(minCount, None)) =>
+    case Event(Frame(frame, _), r@Running(minCount, None)) =>
       val decoder = new H264DecoderContext(countCoins)
-      decoder.decode(frame)
+      decoder.decode(frame, true)
       stay() using r.copy(decoder = Some(decoder))
-    case Event(Frame(frame), Running(minCount, Some(decoder: VideoDecoderContext))) if frame.length > 0 =>
-      decoder.decode(frame)
+    case Event(Frame(frame, _), Running(minCount, Some(decoder: VideoDecoderContext))) if frame.length > 0 =>
+      decoder.decode(frame, true)
       stay()
-    case Event(Frame(_), Running(_, Some(decoder))) =>
+    case Event(Frame(_, _), Running(_, Some(decoder))) =>
       decoder.close()
       goto(Completed)
   }
