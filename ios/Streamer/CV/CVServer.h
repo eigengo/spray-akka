@@ -80,9 +80,14 @@ typedef struct {
   /**
    * Obtains the ``CVServerConnectionInput`` that expects stream of frames.
    */
-- (id<CVServerConnectionInput>)streamInput:(id<CVServerConnectionDelegate>)delegate;
+- (id<CVServerConnectionInput>)h264Input:(id<CVServerConnectionDelegate>)delegate;
 
   /**
+   * Obtains the ``CVServerConnectionInput`` that expects stream of frames.
+   */
+- (id<CVServerConnectionInput>)mjpegInput:(id<CVServerConnectionDelegate>)delegate;
+
+/**
    * Obtains the ``CVServerConnectionInput`` that expects stream of frames and that
    * hosts the stream as RTSP server on the device.
    */

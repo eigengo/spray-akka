@@ -103,7 +103,6 @@ private[core] class RecogSessionActor(amqpConnection: ActorRef, jabberActor: Act
       decoder.decode(frame)
       stay() using r.copy(decoder = Some(decoder))
     case Event(Frame(frame), Running(minCount, Some(decoder: VideoDecoderContext))) if frame.length > 0 =>
-      log.debug(".")
       decoder.decode(frame)
       stay()
     case Event(Frame(_), Running(_, Some(decoder))) =>

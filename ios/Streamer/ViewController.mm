@@ -71,7 +71,7 @@
 	//serverConnectionInput = [serverTransactionConnection staticInput:self];
 	
 	// (b) using stream
-	serverConnectionInput = [serverTransactionConnection streamInput:self];
+	serverConnectionInput = [serverTransactionConnection mjpegInput:self];
 	
 	// (c) using RTSP server
 	//NSURL *url;
@@ -125,7 +125,7 @@
 	self.startStopButton.enabled = false;
 
 	serverTransactionConnection = [serverConnection begin:nil];
-	serverConnectionInput = [serverTransactionConnection streamInput:self];
+	serverConnectionInput = [serverTransactionConnection h264Input:self];
 	
 	dispatch_queue_t queue = dispatch_queue_create("Predef", NULL);
 	dispatch_sync(queue, ^{

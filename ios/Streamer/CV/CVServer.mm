@@ -16,12 +16,25 @@
 - (id)initWithUrl:(NSURL*)url session:(NSString*)sessionId andDelegate:(id<CVServerConnectionDelegate>)delegate;
 - (void)initConnectionInput;
 - (CVServerConnectionInputStats)getStats;
+- (void)submitFrameRaw:(NSData *)rawFrame;
+@end
+
+@interface AbstractStreamingCVServerConnectionInput : AbstractCVServerConnectionInput {
+@protected
+	NSData* marker;
+}
+- (void)initConnectionInput;
+- (void)submitFrameRaw:(NSData*)rawFrame;
+- (void)stopRunning;
 @end
 
 @interface CVServerConnectionInputStatic : AbstractCVServerConnectionInput<CVServerConnectionInput>
 @end
 
-@interface CVServerConnectionInputStream : AbstractCVServerConnectionInput<CVServerConnectionInput> 
+@interface CVServerConnectionInputH264 : AbstractStreamingCVServerConnectionInput<CVServerConnectionInput>
+@end
+
+@interface CVServerConnectionInputMJPEG : AbstractStreamingCVServerConnectionInput<CVServerConnectionInput>
 @end
 
 @interface CVServerConnectionRTSPServer : AbstractCVServerConnectionInput<CVServerConnectionInput>
@@ -51,8 +64,12 @@
 	return [[CVServerConnectionInputStatic alloc] initWithUrl:[self inputUrl:@"static"] session:sessionId andDelegate:delegate];
 }
 
-- (id<CVServerConnectionInput>)streamInput:(id<CVServerConnectionDelegate>)delegate {
-	return [[CVServerConnectionInputStream alloc] initWithUrl:[self inputUrl:@"stream"] session:sessionId andDelegate:delegate];
+- (id<CVServerConnectionInput>)h264Input:(id<CVServerConnectionDelegate>)delegate {
+	return [[CVServerConnectionInputH264 alloc] initWithUrl:[self inputUrl:@"h264"] session:sessionId andDelegate:delegate];
+}
+
+- (id<CVServerConnectionInput>)mjpegInput:(id<CVServerConnectionDelegate>)delegate {
+	return [[CVServerConnectionInputMJPEG alloc] initWithUrl:[self inputUrl:@"mjpeg"] session:sessionId andDelegate:delegate];
 }
 
 - (id<CVServerConnectionInput>)rtspServerInput:(id<CVServerConnectionDelegate>)delegate url:(out NSURL**)url {
@@ -122,6 +139,10 @@
 	return stats;
 }
 
+- (void)submitFrameRaw:(NSData *)rawFrame {
+	// nothing to do
+}
+
 @end
 
 #pragma mark - Single image posts
@@ -144,47 +165,17 @@
 	}];
 }
 
-- (void)submitFrameRaw:(NSData *)rawFrame {
-	NSMutableURLRequest *request = [NSMutableURLRequest requestWithURL:url];
-	[request setTimeoutInterval:30.0];
-	[request setHTTPMethod:@"POST"];
-	[request setHTTPBody:rawFrame];
-	[request addValue:@"application/octet-stream" forHTTPHeaderField:@"Content-Type"];
-	AFHTTPRequestOperation* operation = [[AFHTTPRequestOperation alloc] initWithRequest:request];
-	[operation setCompletionBlockWithSuccess:^(AFHTTPRequestOperation *operation, id responseObject) {
-		[delegate cvServerConnectionOk:responseObject];
-	} failure:^(AFHTTPRequestOperation *operation, NSError *error) {
-		[delegate cvServerConnectionFailed:error];
-	}];
-	[operation start];
-	[operation waitUntilFinished];
-	
-	stats.requestCount++;
-	stats.networkBytes += [rawFrame length];
-}
-
 - (void)stopRunning {
 	// This is a static connection. Nothing to see here.
 }
 
 @end
 
-#pragma mark - HTTP Streaming post
+#pragma mark - HTTP Streaming delegates
 
-/**
- * Uses the i264 encoder to encode the incoming stream of frames. 
- */
-@implementation CVServerConnectionInputStream {
+@implementation AbstractStreamingCVServerConnectionInput {
 	BlockingQueueInputStream *stream;
 	bool encoding;
-	AVEncoder* encoder;
-}
-
-- (void)transportData:(NSData*)frame {
-	NSData* sessionIdData = [sessionId dataUsingEncoding:NSASCIIStringEncoding];
-	NSMutableData *frameWithSessionId = [NSMutableData dataWithData:sessionIdData];
-	[frameWithSessionId appendData:frame];
-	[stream appendData:frameWithSessionId];
 }
 
 - (void)initConnectionInput {
@@ -193,7 +184,7 @@
 	stats.networkTime = 0;
 	
 	stream = [[BlockingQueueInputStream alloc] init];
-
+	
 	NSMutableURLRequest *request = [NSMutableURLRequest requestWithURL:url];
 	[request setTimeoutInterval:30.0];
 	[request setHTTPMethod:@"POST"];
@@ -206,9 +197,39 @@
 		[delegate cvServerConnectionFailed:error];
 	}];
 	[operation start];
+}
+
+- (void)transportData:(NSData*)frame {
+	NSData* sessionIdData = [sessionId dataUsingEncoding:NSASCIIStringEncoding];
+	NSMutableData *frameWithSessionId = [NSMutableData dataWithData:sessionIdData];
+	[frameWithSessionId appendData:marker];
+	[frameWithSessionId appendData:frame];
+	[stream appendData:frameWithSessionId];
+}
+
+- (void)submitFrameRaw:(NSData *)rawFrame {
+	[self transportData:rawFrame];
+}
+
+- (void)stopRunning {
+	[self transportData:[[NSData alloc] init]];
+	[stream close];
+}
+
+@end
+
+/**
+ * Uses the i264 encoder to encode the incoming stream of frames. 
+ */
+@implementation CVServerConnectionInputH264 {
+	AVEncoder* encoder;
+}
+
+- (void)initConnectionInput {
+	[super initConnectionInput];
+	marker = [@"H" dataUsingEncoding:NSASCIIStringEncoding];
 	
 	encoder = [AVEncoder encoderForHeight:480 andWidth:720];
-	__block bool paramsSent = false;
 	[encoder encodeWithBlock:^int(NSArray *data, double pts) {
 		for (NSData* e in data) {
 			stats.networkBytes += e.length;
@@ -216,24 +237,7 @@
 		}
 		return 0;
 	} onParams:^int(NSData *params) {
-		if (paramsSent) return 0;
-		
-		avcCHeader avcC((const BYTE*)[params bytes], [params length]);
-		
-		SeqParamSet seqParams;
-		seqParams.Parse(avcC.sps());
-		int cx = seqParams.EncodedWidth();
-		int cy = seqParams.EncodedHeight();
-		
-		NSLog(@"%d * %d", cx, cy);
-
-		uint8_t zzzo[] = {0, 0, 0, 1};
-		
-		NSMutableData *data = [NSMutableData dataWithBytes:zzzo length:4];
-		[data appendBytes:avcC.sps()->Start() length:avcC.sps()->Length()];
-		[data appendBytes:avcC.pps()->Start() length:avcC.pps()->Length()];
-		[self transportData:data];
-		paramsSent = true;
+		[self transportData:params];
 		return 0;
 	}];
 }
@@ -242,15 +246,22 @@
 	[encoder encodeFrame:frame];
 }
 
-- (void)submitFrameRaw:(NSData *)rawFrame {
-	NSMutableData *data = [NSMutableData dataWithData:[sessionId dataUsingEncoding:NSASCIIStringEncoding]];
-	[data appendData:rawFrame];
-	[stream appendData:data];
+@end
+
+@implementation CVServerConnectionInputMJPEG {
+	ImageEncoder *imageEncoder;
 }
 
-- (void)stopRunning {
-	[stream appendData:[sessionId dataUsingEncoding:NSASCIIStringEncoding]];
-	[stream close];
+- (void)initConnectionInput {
+	marker = [@"M" dataUsingEncoding:NSASCIIStringEncoding];
+
+	imageEncoder = [[ImageEncoder alloc] init];
+}
+
+- (void)submitFrame:(CMSampleBufferRef)frame {
+	[imageEncoder encode:frame withSuccess:^(NSData* data) {
+		[self transportData:data];
+	}];
 }
 
 @end
