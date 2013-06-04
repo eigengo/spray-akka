@@ -595,3 +595,89 @@ quit
 So, it works.
 
 #REST
+We have this funky, concurrent, scalable system; and yet, we use it from the command line. Not good. Let's give it some nice RESTful API that can deal with different clients. And, seeing how cool we all are, let's have iOS client.
+
+Remember our ``Api`` trait? It's time to look in detail into what it does.
+
+```scala
+trait Api {
+  this: Core =>
+
+  val streamingRecogService = system.actorOf(Props(new StreamingRecogService(coordinator)))
+  val ioBridge: ActorRef = IOExtension(system).ioBridge()
+  val settings: ServerSettings = ServerSettings()
+
+  system.actorOf(Props(new HttpServer(ioBridge, SingletonHandler(streamingRecogService), settings)), "http-server") ! HttpServer.Bind("0.0.0.0", 8080)
+
+}
+```
+
+These incantations create the Spray-can server with the ``StreamingRecogService`` actor handling all the requests. Naturally, just like the ``Shell``, the ``StreamingRecogService`` needs to be given the ``ActorRef`` to the coordinator actor.
+
+#StreamingRecogService
+The ``StreamingRecogService`` now receives the messages; deals with the details of HTTP and hands over to the ``coordinator``.
+
+```scala
+class StreamingRecogService(coordinator: ActorRef) extends Actor {
+  import akka.pattern.ask
+  import scala.concurrent.duration._
+  import context.dispatcher
+  implicit val timeout = akka.util.Timeout(2.seconds)
+
+  import StreamingRecogService._
+
+  def receive = {
+    // begin a transaction
+    case HttpRequest(HttpMethods.POST, RootUri, _, _, _) =>
+      val client = sender
+      (coordinator ? Begin(2)).mapTo[String].onComplete {
+        case Success(sessionId) => client ! HttpResponse(entity = sessionId)
+        case Failure(ex)        => client ! HttpResponse(entity = ex.getMessage, status = StatusCodes.InternalServerError)
+      }
+
+    // stream to /recog/mjpeg/:id
+    case ChunkedRequestStart(HttpRequest(HttpMethods.POST, MJPEGUri(sessionId), _, entity, _)) =>
+      coordinator ! SingleImage(sessionId, entity.buffer, false)
+    // stream to /recog/h264/:id
+    case ChunkedRequestStart(HttpRequest(HttpMethods.POST, H264Uri(sessionId), _, entity, _)) =>
+      coordinator ! FrameChunk(sessionId, entity.buffer, false)
+    case MessageChunk(body, extensions) =>
+      // parse the body
+      coordinator ! message
+    case ChunkedMessageEnd(extensions, trailer) =>
+      sender ! HttpResponse(entity = "{}")
+
+    // POST to /recog/static/:id
+    case HttpRequest(HttpMethods.POST, StaticUri(sessionId), _, entity, _) =>
+      coordinator ! SingleImage(sessionId, entity.buffer, true)
+
+    // POST to /recog/rtsp/:id
+    case HttpRequest(HttpMethods.POST, RtspUri(sessionId), _, entity, _) =>
+      println(entity.asString)
+      sender ! HttpResponse(entity = "Listening to " + entity.asString)
+
+    // all other requests
+    case HttpRequest(method, uri, _, _, _) =>
+      sender ! HttpResponse(entity = "No such endpoint. That's all we know.", status = StatusCodes.NotFound)
+  }
+
+}
+```
+
+Just a bit of typing, is all! Notice though that we handle HTTP chunks. In other words, we expect our clients to send us the video stream by parts, not in one big chunk. 
+
+#Let's play!
+I happen to have my iPhone here with the app installed; and I've pre-recorded a video. Let's see how it all behaves.
+
+* Observe the JVM console
+* Observe RabbitMQ console
+
+#Questions?
+
+#Done
+
+[@honzam399](https://twitter.com/honzam399)
+[janm@cakesolutions.net](mailto:janm@cakesolutions.net)
+[cakesolutions.net](http://www.cakesolutions.net)
+[github.com/janm399](https://github.com/janm399)
+[github.com/eigengo](https://github.com/eigengo)

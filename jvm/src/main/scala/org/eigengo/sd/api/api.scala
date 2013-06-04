@@ -14,5 +14,4 @@ trait Api {
 
   system.actorOf(Props(new HttpServer(ioBridge, SingletonHandler(streamingRecogService), settings)), "http-server") ! HttpServer.Bind("0.0.0.0", 8080)
 
-
 }
