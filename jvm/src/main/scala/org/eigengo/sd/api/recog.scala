@@ -18,6 +18,12 @@ object StreamingRecogService {
   val StaticUri = makePattern("/recog/static/")
 }
 
+/**
+ * Given the ``coordinator``, it receives messages that represent the HTTP requests;
+ * processes them and routes messages into the core of our system.
+ *
+ * @param coordinator the coordinator that does all the heavy lifting
+ */
 class StreamingRecogService(coordinator: ActorRef) extends Actor {
   import akka.pattern.ask
   import scala.concurrent.duration._
@@ -42,10 +48,16 @@ class StreamingRecogService(coordinator: ActorRef) extends Actor {
     case ChunkedRequestStart(HttpRequest(HttpMethods.POST, H264Uri(sessionId), _, entity, _)) =>
       coordinator ! FrameChunk(sessionId, entity.buffer, false)
     case MessageChunk(body, extensions) =>
+      // Ghetto: we say that the chunk's bytes are
+      //  * 0 - 35: the session ID in ASCII encoding
+      //  * 36    : the kind of chunk (H.264, JPEG, ...)
+      //  * 37    : indicator whether this chunk is the end of some larger logical unit (i.e. image)
+
       // parse the body
       val frame = Array.ofDim[Byte](body.length - 38)
       Array.copy(body, 38, frame, 0, frame.length)
 
+      // extract the components
       val sessionId = new String(body, 0, 36)
       val marker    = body(36)
       val end       = body(37) == 'E'
@@ -53,8 +65,10 @@ class StreamingRecogService(coordinator: ActorRef) extends Actor {
       // prepare the message
       val message   = if (marker == 'H') FrameChunk(sessionId, frame, end) else SingleImage(sessionId, frame, end)
 
+      // our work is done: bang it to the coordinator.
       coordinator   ! message
     case ChunkedMessageEnd(extensions, trailer) =>
+      // we say nothing back
       sender ! HttpResponse(entity = "{}")
 
     // POST to /recog/static/:id

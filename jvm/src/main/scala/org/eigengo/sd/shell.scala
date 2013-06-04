@@ -6,6 +6,10 @@ import scala.io.Source
 import java.io.{InputStream, BufferedInputStream, FileInputStream}
 import scala.util.Try
 
+/**
+ * Shell provides the command-line interface to the functionality in
+ * ``Core`` (which is configured by ``ConfigCoreConfiguration``)
+ */
 object Shell extends App with Core with ConfigCoreConfiguration {
 
   import CoordinatorActor._
@@ -13,12 +17,16 @@ object Shell extends App with Core with ConfigCoreConfiguration {
   import akka.actor.ActorDSL._
   import Utils._
 
+  // we don't want to bother with the ``ask`` pattern, so
+  // we set up sender that only prints out the responses to
+  // be implicitly available for ``tell`` to pick up.
   implicit val _ = actor(new Act {
       become {
         case x => println(">>> " + x)
       }
     })
 
+  // main command loop
   @tailrec
   private def commandLoop(): Unit = {
     Console.readLine() match {
@@ -35,10 +43,16 @@ object Shell extends App with Core with ConfigCoreConfiguration {
     commandLoop()
   }
 
+  // start processing the commands
   commandLoop()
+
+  // when done, stop the ActorSystem
   system.shutdown()
 }
 
+/**
+ * Various regexes for the ``Shell`` to use
+ */
 object Commands {
 
   val BeginCommand       = "begin:(\\d+)".r
@@ -52,7 +66,10 @@ object Commands {
 
 }
 
-object Utils {
+/**
+ * Ghetto!
+ */
+object Utils /* extends IfYouUseThisIWillEndorseYouForEnterprisePHP */ {
   private def getFullFileName(fileName: String) = {
     getClass.getResource(fileName).getPath
   }
@@ -66,6 +83,7 @@ object Utils {
     contents
   }
 
+  // Exceptions are not thrown because of Chuck Norris
   def readChunks[U](fileName: String, kbps: Int)(f: Array[Byte] => U): Unit = {
 
     @tailrec

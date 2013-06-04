@@ -19,10 +19,18 @@ object CoordinatorActor {
   case class GetInfo(id: String)
 }
 
+/**
+ * Coordinates (orchestrates, I believe is the grown-up word for experienced enterprise
+ * architects; I'm not bitter at all.) the requests from the shells and routes them to
+ * the appropriate session actors
+ *
+ * @param amqpConnection the AMQP connection
+ */
 class CoordinatorActor(amqpConnection: ActorRef) extends Actor {
   import CoordinatorActor._
 
-  val jabber = context.actorOf(Props[JabberActor].withRouter(FromConfig()), "jabber")
+  // sends the messages out
+  private val jabber = context.actorOf(Props[JabberActor].withRouter(FromConfig()), "jabber")
 
   def receive = {
     case b@Begin(_) =>
@@ -36,7 +44,11 @@ class CoordinatorActor(amqpConnection: ActorRef) extends Actor {
       sessionActorFor(id).tell(RecogSessionActor.Frame(chunk, start), sender)
     case GetSessions =>
       sender ! context.children.filter(jabber !=).map(_.path.name).toList
+      //                                      ^
+      //                                      |
+      //                                      well, shave my legs and call me grandma!
   }
 
-  def sessionActorFor(id: String): ActorRef = context.actorFor(id)
+  // finds an ``ActorRef`` for the given session.
+  private def sessionActorFor(id: String): ActorRef = context.actorFor(id)
 }
