@@ -21,7 +21,7 @@ std::vector<Coin> CoinCounter::countCpu(const cv::Mat &image) {
 				 40,   // min dist
 				 100,  // canny1
 				 20,	   // canny2
-				 25,   // min radius
+				 30,   // min radius
 				 100   // max radius
 				 );
 	
