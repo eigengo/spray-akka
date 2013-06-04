@@ -42,7 +42,7 @@ class H264DecoderContext[U](f: Array[Byte] => U) extends VideoDecoderContext {
         videoCoder.open(IMetaData.make(), IMetaData.make())
         isOpen = true
       } catch {
-        case x: Throwable => println(x)
+        case x: Throwable => // noop
       }
     }
     isOpen
@@ -61,13 +61,15 @@ class H264DecoderContext[U](f: Array[Byte] => U) extends VideoDecoderContext {
         var offset = 0
         while (offset < packet.getSize) {
           val bytesDecoded = videoCoder.decodeVideo(picture, packet, offset)
-          offset = offset + bytesDecoded
-          if (picture.isComplete) {
-            val javaImage = Utils.videoPictureToImage(picture)
-            val os = new ByteArrayOutputStream
-            ImageIO.write(javaImage, "png", os)
-            os.close()
-            f(os.toByteArray)
+          if (bytesDecoded > 0) {
+            offset = offset + bytesDecoded
+            if (picture.isComplete) {
+              val javaImage = Utils.videoPictureToImage(picture)
+              val os = new ByteArrayOutputStream
+              ImageIO.write(javaImage, "png", os)
+              os.close()
+              f(os.toByteArray)
+            }
           }
         }
       }
@@ -82,13 +84,12 @@ class H264DecoderContext[U](f: Array[Byte] => U) extends VideoDecoderContext {
 }
 
 class TemporaryFile {
-  val file: File = File.createTempFile("video", "mp4")
+  //val file: File = File.createTempFile("video", "mp4")
+  val file: File = new File("/Users/janmachacek/x.mp4")
   var open: Boolean = true
   private val fos: FileOutputStream = new FileOutputStream(file)
-  private val rs: Semaphore = new Semaphore(0)
 
   def run[U](f: => U): U = {
-    //rs.acquire()
     val u = f
 
     u
@@ -98,13 +99,11 @@ class TemporaryFile {
     if (open) {
       fos.write(buffer)
       fos.flush()
-      //rs.release()
     }
   }
 
   def close(): Unit = {
     if (open) {
-      rs.release()
       fos.close()
       open = false
     }
