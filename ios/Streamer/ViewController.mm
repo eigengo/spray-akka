@@ -1,7 +1,6 @@
 #import "ViewController.h"
 
-#define FRAMES_PER_SECOND 5
-#define FRAMES_PER_SECOND_MOD (25 / FRAMES_PER_SECOND)
+#define FRAMES_PER_SECOND_MOD 7
 
 @implementation ViewController {
 	CVServerConnection *serverConnection;

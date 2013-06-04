@@ -217,6 +217,7 @@
 
 - (void)stopRunning {
 	[self transportData:[[NSData alloc] init]];
+	[self transportData:[[NSData alloc] init]];
 	[stream close];
 }
 

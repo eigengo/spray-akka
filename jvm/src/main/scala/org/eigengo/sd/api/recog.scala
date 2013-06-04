@@ -50,7 +50,9 @@ class StreamingRecogService(coordinator: ActorRef) extends Actor {
       val marker    = body(36)
       val end       = body(37) == 'E'
 
+      // prepare the message
       val message   = if (marker == 'H') FrameChunk(sessionId, frame, end) else SingleImage(sessionId, frame, end)
+
       coordinator   ! message
     case ChunkedMessageEnd(extensions, trailer) =>
       sender ! HttpResponse(entity = "{}")

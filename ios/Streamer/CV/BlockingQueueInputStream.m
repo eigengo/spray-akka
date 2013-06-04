@@ -19,7 +19,7 @@
 		chunkHeader = aChunkHeader;
 		end = [@"E" dataUsingEncoding:NSASCIIStringEncoding];
 		mid = [@"M" dataUsingEncoding:NSASCIIStringEncoding];
-		chunkSize = 16000;
+		chunkSize = 32768 - chunkHeader.length - 1;
     }
     
     return self;
@@ -98,6 +98,7 @@
 	}
 	
 	if (dataLen > len) {
+		NSLog(@"len = %d", len);
 		NSMutableData *newData = [NSMutableData dataWithData:chunkHeader];
 		[newData appendData:[data subdataWithRange:NSMakeRange(len, dataLen - len)]];
 		if (newData.length > chunkSize) {
