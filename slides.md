@@ -540,7 +540,7 @@ private[core] trait AmqpOperations {
 Right. The ``amqp`` ``ActorRef`` behaves just like ordinary Akka actor, except it sends the message over AMQP. Mixed into our ``RecogSessionActor`` makes us ready to move on!
 
 #Stringly-typed
-Oh, the humanity! We have ``Future[String]`` returned from the ``amqpAsk`` function. Stringly-typed is not a good thing to have; we know that the response will be a JSON; one that matches
+Oh, the humanity! We have ``Future[String]`` returned from the ``amqpAsk`` function. Stringly-typed code is not a good thing to have; we know that the response will be a JSON; one that matches
 
 ```scala
 private[core] case class Coin(center: Double, radius: Double)
@@ -550,7 +550,7 @@ private[core] case class CoinResponse(coins: List[Coin], succeeded: Boolean)
 Let's no modify the ``amqpAsk`` to deal with it. _Any suggestions?_
 
 #Stand back. I know typeclasses!
-Specifically, typeclass ``JsonReader[A]``, whose instances can turn some JSON into instances of ``A``s. We then leave the compiler to do the dirty work for us and select the appropriate ``JsonReader[A]`` in our ``amqpAsk``. We need to make it polymorphic and ask the compiler to implicitly give us instance of ``JsonReader`` for that ``A``. Of course, we're now returning ``Future[A]``.
+Specifically, typeclass ``JsonReader[A]``, whose instances can turn some JSON into instances of ``A``. We then leave the compiler to do the dirty work for us and select the appropriate ``JsonReader[A]`` in our ``amqpAsk``. We need to make it polymorphic and ask the compiler to implicitly give us instance of ``JsonReader`` for that ``A``. Of course, we're now returning ``Future[A]``.
 
 ```scala
 private[core] trait AmqpOperations {
