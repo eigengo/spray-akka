@@ -1,5 +1,11 @@
 package org.eigengo.sd.core
 
+/**
+ * Contains functions that encode the image to be consumed on the other end of the AMQP
+ * queue. Viz ``/native/im.cpp``.
+ *
+ * Also, notice that our magic constant is [Face of Boe](http://en.wikipedia.org/wiki/Face_of_Boe)
+ */
 trait ImageEncoding {
 
   private def writeBEInt32(value: Int): Array[Byte] = {
@@ -11,6 +17,7 @@ trait ImageEncoding {
     Array(b0, b1, b2, b3)
   }
 
+  // David Tennant was the best Doctor Who, anyway.
   private final val Magic = writeBEInt32(0xface0fb0)
   private final val One = writeBEInt32(0x00000001)
 
