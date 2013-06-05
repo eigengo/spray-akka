@@ -18,8 +18,8 @@ std::vector<Coin> CoinCounter::countCpu(const cv::Mat &image) {
 	//Canny(dst, dst, 1000, 1700, 5);
 	HoughCircles(dst, circles, CV_HOUGH_GRADIENT,
 				 1,    // dp
-				 40,   // min dist
-				 100,  // canny1
+				 60,   // min dist
+				 200,  // canny1
 				 20,	   // canny2
 				 30,   // min radius
 				 100   // max radius
