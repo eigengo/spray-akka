@@ -19,8 +19,6 @@ enum ImageFormat {
    */
 - (void)encode:(CMSampleBufferRef)frame withPreflight:(bool (^)(CGImageRef))preflight andSuccess:(void (^)(NSData*))success;
 
-// TODO: include properties
-
 /**
  * if != nil, the compression quality for the JPEG compression. Ignored when
  * ``imageFormat`` is ``PNG``
