@@ -6,12 +6,18 @@ import com.github.sstone.amqp.ConnectionOwner
 
 case class Begin(minCoins: Int)
 
+/**
+ * Contains configuration for the core
+ */ 
 trait CoreConfiguration {
 
   def amqpConnectionFactory: ConnectionFactory
 
 }
 
+/**
+ * Implementation of the ``CoreConfiguration`` that uses the underlying ``system``'s ``settings``.
+ */
 trait ConfigCoreConfiguration extends CoreConfiguration {
   def system: ActorSystem
 
@@ -21,6 +27,9 @@ trait ConfigCoreConfiguration extends CoreConfiguration {
 
 }
 
+/**
+ * Contains the functionality of the "headless" part of our app
+ */
 trait Core {
   this: CoreConfiguration =>
 

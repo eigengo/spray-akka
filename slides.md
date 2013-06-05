@@ -68,6 +68,8 @@ object Shell extends App {
 
 So far, not so good. We can run the ``Shell`` app, which starts the command loop. The command loop reads from the console. When we type ``quit``, it exits; otherwise, it prints ``WTF??!!``. We need to get it to do something interesting.
 
+> groll next | 0ae1a6a
+
 #Layers
 To allow us to assemble the shells, we structure our code into two main traits: ``Core`` and ``Api``.
 
@@ -95,7 +97,7 @@ trait Api {
 
 The code in the ``Core`` trait assembles the "headless" part of our application. It starts the ``ActorSystem`` and creates the _coordinator_ and _AMQP_ actors.
 
-> groll next
+> groll next | fa5cb99
 
 #Core configuration
 We don't want to hard-code things like the AMQP server host in our application. These need to be somehow externalised. But we may want to use different configuration for our tests; and different configuration in each test for that matter. So, we create
@@ -131,7 +133,7 @@ trait Core {
 }
 ```
 
-> groll next
+> groll next | 8059e8d
 
 #Shell II
 So, let's go back to the ``Shell`` ``App`` and mix in the traits that contian the headless parts of our application; and add the necessary call to shutdown the ``ActorSystem``.
@@ -146,7 +148,7 @@ object Shell extends App with Core with ConfigCoreConfiguration {
 }
 ```
 
-> groll next
+> groll next | ca55eec
 
 #Beginning a session
 The coordinator is responsible for the sessions; begins one when it receives the ``Begin`` message. The session itself lives in its own actor: a child of the coordinator:
@@ -184,7 +186,7 @@ private[core] class RecogSessionActor(amqpConnection: ActorRef, jabberActor: Act
 
   when(Idle, stateTimeout) {
     case Event(Begin(minCoins), _) =>
-      sender ! selfId
+      sender ! self.path.name
       goto(Active) using Running(minCoins, None)
   }
 
@@ -195,7 +197,7 @@ private[core] class RecogSessionActor(amqpConnection: ActorRef, jabberActor: Act
 
 This is the important stuff. The ``CoordinatorActor`` creates a new ``RecogSessionActor``; forwards it the received ``Begin`` message. The newly created ``RecogSessionActor`` replies with its ``name`` to the original sender.
 
-> groll next
+> groll next | b0771c5
 
 #Shell III
 We will now need to add the begin command to the shell.
@@ -250,7 +252,7 @@ object Shell extends App with Core with ConfigCoreConfiguration {
 
 Now the ``!`` function can find the implicit ``ActorRef`` to be used as the sender. And hence, when we now type ``begin:1``, we will see the newly created session id.
 
-> groll next
+> groll next | 8ae6326
 
 #Listing the sessions
 Let's handle the command to list the sessions; in other words, when we send the coordinator the ``GetSessions`` command, we expect to get a list of ids of the active sessions.
@@ -297,7 +299,7 @@ class CoordinatorActor(amqpConnection: ActorRef) extends Actor {
 
 (How cool is ``jabber !=``, eh?)
 
-> groll next
+> groll next | 9420dbe
 
 #Remaining commands
 OK, let's complete the remaining commands in the Shell.
@@ -322,6 +324,40 @@ object Shell extends App with Core with ConfigCoreConfiguration {
   ...
 }
 ```
+
+We also need to handle the remaining commands in the ``CoordinatorActor``.
+
+```scala
+class CoordinatorActor(amqpConnection: ActorRef) extends Actor {
+  import CoordinatorActor._
+
+  // sends the messages out
+  val jabber = context.actorOf(Props[JabberActor].withRouter(FromConfig()), "jabber")
+
+  def receive = {
+    case b@Begin(_) =>
+      val rsa = context.actorOf(Props(new RecogSessionActor(amqpConnection, jabber)), UUID.randomUUID().toString)
+      rsa.forward(b)
+    case GetInfo(id) =>
+      sessionActorFor(id).tell(RecogSessionActor.GetInfo, sender)
+    case SingleImage(id, image, start) =>
+      sessionActorFor(id).tell(RecogSessionActor.Image(image, start), sender)
+    case FrameChunk(id, chunk, start) =>
+      sessionActorFor(id).tell(RecogSessionActor.Frame(chunk, start), sender)
+    case GetSessions =>
+      sender ! context.children.filter(jabber !=).map(_.path.name).toList
+      //                                      ^
+      //                                      |
+      //                                      well, shave my legs and call me grandma!
+  }
+
+  // finds an ``ActorRef`` for the given session.
+  def sessionActorFor(id: String): ActorRef = context.actorFor(id)
+
+}
+```
+
+> groll next | 28d255d
 
 #Recog session
 The recog session is an FSM actor; it moves through different states depending on the messages it receives; it also maintians timeouts--when the user abandons a session, the session actor will remove itself once the timeout elapses.
@@ -373,6 +409,8 @@ private[core] class RecogSessionActor(amqpConnection: ActorRef, jabberActor: Act
 
 Complicated? Yes. Difficult to write & understand? No! 
 
+> groll next | 6b2449d
+
 #AMQP
 But we're counting coins in images! All we've seen so far is some data pushing in Scala. We need to connect our super-smart (T&Cs apply) compter vision code.
 
@@ -389,7 +427,7 @@ In other words, we have the array of coins and indication whether we were able t
 
 So, let's wire in the AMQP connector and send it the messages.
 
-#AMQP actor
+###AMQP actor
 We create the ``amqp`` actor whenever we create the ``RecogSessionActor``.
 
 ```scala
@@ -430,7 +468,8 @@ private[core] class RecogSessionActor(amqpConnection: ActorRef, jabberActor: Act
 }
 ```
 
-#Stopping
+###Stopping
+
 But wait? When **do** we stop? Intuitively, we sould like to stop this actor when we encounter a state timout or when we complete. That can all be defined as behaviour on transitions.
 
 ```scala
@@ -454,6 +493,8 @@ private[core] class RecogSessionActor(amqpConnection: ActorRef, jabberActor: Act
 ```
 
 Right ho. We can now write the code to send the images to the components on the other end of RabbitMQ.
+
+> groll next | 017381a
 
 #Sending images
 The recognition can deal with H.264 stream as well as individual images, but once you've sent the first frame of the stream or the first image, you must keep sending more frames or more images. In other words, you cannot combine H.264 and static frames.
