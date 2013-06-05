@@ -682,6 +682,8 @@ trait Api {
 
 These incantations create the Spray-can server with the ``StreamingRecogService`` actor handling all the requests. Naturally, just like the ``Shell``, the ``StreamingRecogService`` needs to be given the ``ActorRef`` to the coordinator actor.
 
+> groll next | 0fa89fd
+
 #StreamingRecogService
 The ``StreamingRecogService`` now receives the messages; deals with the details of HTTP and hands over to the ``coordinator``.
 
@@ -710,8 +712,25 @@ class StreamingRecogService(coordinator: ActorRef) extends Actor {
     case ChunkedRequestStart(HttpRequest(HttpMethods.POST, H264Uri(sessionId), _, entity, _)) =>
       coordinator ! FrameChunk(sessionId, entity.buffer, false)
     case MessageChunk(body, extensions) =>
+      // Ghetto: we say that the chunk's bytes are
+      //  * 0 - 35: the session ID in ASCII encoding
+      //  * 36    : the kind of chunk (H.264, JPEG, ...)
+      //  * 37    : indicator whether this chunk is the end of some larger logical unit (i.e. image)
+
       // parse the body
-      coordinator ! message
+      val frame = Array.ofDim[Byte](body.length - 38)
+      Array.copy(body, 38, frame, 0, frame.length)
+
+      // extract the components
+      val sessionId = new String(body, 0, 36)
+      val marker    = body(36)
+      val end       = body(37) == 'E'
+
+      // prepare the message
+      val message   = if (marker == 'H') FrameChunk(sessionId, frame, end) else SingleImage(sessionId, frame, end)
+
+      // our work is done: bang it to the coordinator.
+      coordinator   ! message
     case ChunkedMessageEnd(extensions, trailer) =>
       sender ! HttpResponse(entity = "{}")
 
@@ -734,6 +753,8 @@ class StreamingRecogService(coordinator: ActorRef) extends Actor {
 
 Just a bit of typing, is all! Notice though that we handle HTTP chunks. In other words, we expect our clients to send us the video stream by parts, not in one big chunk. 
 
+> groll next | 54e4c0e
+
 #REST server app
 Finally, we need to build another ``App`` object. This time, we will be starting the REST API. Looking at the ``Api`` and ``Core`` traits, nothing could be simpler! 
 
@@ -745,9 +766,12 @@ object Rest extends App with Core with Api with ConfigCoreConfiguration
 
 And that's it!
 
+> groll next | d08a5f6
+
 #Let's play!
 I happen to have my iPhone here with the app installed; and I've pre-recorded a video. Let's see how it all behaves.
 
+* Run the iOS app
 * Observe the JVM console
 * Observe RabbitMQ console
 
