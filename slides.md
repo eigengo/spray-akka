@@ -508,7 +508,7 @@ private[core] class RecogSessionActor(amqpConnection: ActorRef, jabberActor: Act
   // when ``Active``, we can process images and frames
   when(Active, stateTimeout) {
     case Event(Image(image, end), r@Running(minCoins, None)) =>
-      val decoder = new NoopDecoderContext(countCoins(minCoins))
+      val decoder = new ChunkingDecoderContext(countCoins(minCoins))
       decoder.decode(image, end)
       stay() using r.copy(decoder = Some(decoder))
     case Event(Image(image, end), Running(minCount, Some(decoder: ImageDecoderContext))) if image.length > 0  =>
@@ -542,18 +542,17 @@ private[core] class RecogSessionActor(amqpConnection: ActorRef, jabberActor: Act
   // when ``Active``, we can process images and frames
   when(Active, stateTimeout) {
     case Event(Image(image, end), r@Running(minCoins, None)) if image.length > 0  =>
-      val decoder = new NoopDecoderContext(countCoins(minCoins))
+      val decoder = new ChunkingDecoderContext(countCoins(minCoins))
       decoder.decode(image, end)
       stay() using r.copy(decoder = Some(decoder))
     ...
   }
 
-  def countCoins(minCoins: Int)(image: Array[Byte]): Unit =
-    amqpAsk(amqp)("amq.direct", "count.key", mkImagePayload(image)) onSuccess {
-      case res => if (res.coins.size >= minCoins) jabberActor ! res
-    }
+  def countCoins(minCoins: Int)(image: Array[Byte]): Unit = ()
 }
 ```
+
+> groll next | 9c632af
 
 #Asking AMQP
 Let's keep peeling the onion and define the ``amqpAsk`` function. We'll put it in the ``AmqpOperations`` trait.
@@ -581,7 +580,9 @@ private[core] trait AmqpOperations {
 
 Right. The ``amqp`` ``ActorRef`` behaves just like ordinary Akka actor, except it sends the message over AMQP. Mixed into our ``RecogSessionActor`` makes us ready to move on!
 
-#Stringly-typed
+> groll next | 8409107
+
+##Stringly-typed
 Oh, the humanity! We have ``Future[String]`` returned from the ``amqpAsk`` function. Stringly-typed code is not a good thing to have; we know that the response will be a JSON; one that matches
 
 ```scala
@@ -591,7 +592,7 @@ private[core] case class CoinResponse(coins: List[Coin], succeeded: Boolean)
 
 Let's no modify the ``amqpAsk`` to deal with it. _Any suggestions?_
 
-#Stand back. I know typeclasses!
+##Stand back. I know typeclasses!
 Specifically, typeclass ``JsonReader[A]``, whose instances can turn some JSON into instances of ``A``. We then leave the compiler to do the dirty work for us and select the appropriate ``JsonReader[A]`` in our ``amqpAsk``. We need to make it polymorphic and ask the compiler to implicitly give us instance of ``JsonReader`` for that ``A``. Of course, we're now returning ``Future[A]``.
 
 ```scala
@@ -644,6 +645,8 @@ private[core] class RecogSessionActor(amqpConnection: ActorRef, jabberActor: Act
     }
 }
 ```
+
+> groll next | e9a7d10
 
 #Let's now see...
 We should be able to us the shell completely. Let's execute
