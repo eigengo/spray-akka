@@ -84,11 +84,12 @@ trait Core {
 }
 ```
 
+For now, we will only say that ``Api`` requires to be mixed-in with ``Core``.
+
 ```scala
 trait Api {
   this: Core =>
 
-  system.actorOf(Props(new HttpServer(...)), "http-server") ! HttpServer.Bind("0.0.0.0", 8080)
 }
 ```
 
