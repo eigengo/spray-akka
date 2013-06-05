@@ -81,8 +81,4 @@
 	CVPixelBufferUnlockBaseAddress(imageBuffer, 0);
 }
 
-- (void)encode:(CMSampleBufferRef)frame withSuccess:(void (^)(NSData *))success {
-	return [self encode:frame withPreflight:nil andSuccess:success];
-}
-
 @end

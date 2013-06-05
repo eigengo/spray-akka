@@ -3,7 +3,6 @@
 
 @interface ImageEncoder : NSObject
 
-- (void)encode:(CMSampleBufferRef)frame withSuccess:(void (^)(NSData*))success;
 - (void)encode:(CMSampleBufferRef)frame withPreflight:(bool (^)(CGImageRef))preflight andSuccess:(void (^)(NSData*))success;
 
 @end

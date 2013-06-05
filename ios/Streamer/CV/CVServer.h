@@ -44,10 +44,16 @@ typedef struct {
  * Submits the frames to the server
  */
 @protocol CVServerConnectionInput
+
   /**
-   * Submit a frame to the server endpoint
+   * Submit a frame to the server endpoint, accepting any frame
    */
 - (void)submitFrame:(CMSampleBufferRef)frame;
+
+  /**
+   * Submit a frame to the server endpoint, as long as ``preflight`` returns ``true``
+   */
+- (void)submitFrame:(CMSampleBufferRef)frame andPreflight:(bool (^)(CGImageRef))preflight;
 
   /**
    * Complete the stream of frames

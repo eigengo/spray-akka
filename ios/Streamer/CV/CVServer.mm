@@ -12,6 +12,7 @@
 	NSString *sessionId;
 	id<CVServerConnectionDelegate> delegate;
 	CVServerConnectionInputStats stats;
+	ImageEncoder *imageEncoder;
 }
 - (id)initWithUrl:(NSURL*)url session:(NSString*)sessionId andDelegate:(id<CVServerConnectionDelegate>)delegate;
 - (void)initConnectionInput;
@@ -124,6 +125,7 @@
 		url = aUrl;
 		sessionId = aSessionId;
 		delegate = aDelegate;
+		imageEncoder = [[ImageEncoder alloc] init];
 		[self initConnectionInput];
 	}
 	return self;
@@ -148,17 +150,16 @@
 /**
  * Uses plain JPEG encoding to submit the images from the incoming stream of frames
  */
-@implementation CVServerConnectionInputStatic {
-	ImageEncoder *imageEncoder;
-	
-}
-
-- (void)initConnectionInput {
-	imageEncoder = [[ImageEncoder alloc] init];
-}
+@implementation CVServerConnectionInputStatic
 
 - (void)submitFrame:(CMSampleBufferRef)frame {
-	[imageEncoder encode:frame withSuccess:^(NSData* data) {
+	[self submitFrame:frame andPreflight:^bool(CGImageRef) {
+		return true;
+	}];
+}
+
+- (void)submitFrame:(CMSampleBufferRef)frame andPreflight:(bool (^)(CGImageRef))preflight {
+	[imageEncoder encode:frame withPreflight:preflight andSuccess:^(NSData* data) {
 		[self submitFrameRaw:data];
 	}];
 }
@@ -254,11 +255,15 @@
 	[encoder encodeFrame:frame];
 }
 
+- (void)submitFrame:(CMSampleBufferRef)frame andPreflight:(bool (^)(CGImageRef))preflight {
+	[imageEncoder encode:frame withPreflight:preflight andSuccess:^(NSData *) {
+		[encoder encodeFrame:frame];
+	}];
+}
+
 @end
 
-@implementation CVServerConnectionInputMJPEG {
-	ImageEncoder *imageEncoder;
-}
+@implementation CVServerConnectionInputMJPEG 
 
 - (NSData*)marker {
 	return [@"M" dataUsingEncoding:NSASCIIStringEncoding];
@@ -270,7 +275,13 @@
 }
 
 - (void)submitFrame:(CMSampleBufferRef)frame {
-	[imageEncoder encode:frame withSuccess:^(NSData* data) {
+	[self submitFrame:frame andPreflight:^bool(CGImageRef) {
+		return true;
+	}];
+}
+
+- (void)submitFrame:(CMSampleBufferRef)frame andPreflight:(bool (^)(CGImageRef))preflight {
+	[imageEncoder encode:frame withPreflight:preflight andSuccess:^(NSData* data) {
 		[self transportData:data];
 	}];
 }
@@ -333,6 +344,12 @@
 
 - (void)submitFrame:(CMSampleBufferRef)frame {
 	[encoder encodeFrame:frame];
+}
+
+- (void)submitFrame:(CMSampleBufferRef)frame andPreflight:(bool (^)(CGImageRef))preflight {
+	[imageEncoder encode:frame withPreflight:preflight andSuccess:^(NSData *) {
+		[encoder encodeFrame:frame];
+	}];
 }
 
 - (void)submitFrameRaw:(NSData *)rawFrame {
