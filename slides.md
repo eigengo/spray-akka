@@ -360,7 +360,7 @@ class CoordinatorActor(amqpConnection: ActorRef) extends Actor {
 > groll next | 28d255d
 
 #Recog session
-The recog session is an FSM actor; it moves through different states depending on the messages it receives; it also maintians timeouts--when the user abandons a session, the session actor will remove itself once the timeout elapses.
+The recog session is an FSM actor; it moves through different states depending on the messages it receives; it also maintains timeouts--when the user abandons a session, the session actor will remove itself once the timeout elapses.
 
 ```scala
 private[core] class RecogSessionActor(amqpConnection: ActorRef, jabberActor: ActorRef) extends Actor with
@@ -412,7 +412,7 @@ Complicated? Yes. Difficult to write & understand? No!
 > groll next | 6b2449d
 
 #AMQP
-But we're counting coins in images! All we've seen so far is some data pushing in Scala. We need to connect our super-smart (T&Cs apply) compter vision code.
+But we're counting coins in images! All we've seen so far is some data pushing in Scala. We need to connect our super-smart (T&Cs apply) computer vision code.
 
 It sits on the other end of RabbitMQ; when we send the broker a message to the ``amq.direct`` exchange, using the ``count.key`` routing key, it will get routed to the running native code. The native code will pick up the message, take its payload; perform the coin counting using the hough circles transform and reply back with a JSON:
 
