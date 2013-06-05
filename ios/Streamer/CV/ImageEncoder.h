@@ -29,7 +29,7 @@ enum ImageFormat {
 /**
  * The image format: either PNG or JPEG
  */
-@property ImageFormat imageFormat;
+@property enum ImageFormat imageFormat;
 /**
  * if != nil, the desired image size. The code will keep the aspect ratio of the image.
  * If you have 1020 * 720 image and ask it to be resized to 1020 * 800, nothing will
