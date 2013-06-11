@@ -1,6 +1,6 @@
 package org.eigengo.sd.core
 
-import akka.actor.{ActorRef, Props, Actor}
+import akka.actor.{ ActorRef, Props, Actor }
 import java.util.UUID
 import akka.routing.FromConfig
 
@@ -33,7 +33,7 @@ class CoordinatorActor(amqpConnection: ActorRef) extends Actor {
   private val jabber = context.actorOf(Props[JabberActor].withRouter(FromConfig()), "jabber")
 
   def receive = {
-    case b@Begin(_) =>
+    case b @ Begin(_) =>
       val rsa = context.actorOf(Props(new RecogSessionActor(amqpConnection, jabber)), UUID.randomUUID().toString)
       rsa.forward(b)
     case GetInfo(id) =>
@@ -44,9 +44,9 @@ class CoordinatorActor(amqpConnection: ActorRef) extends Actor {
       sessionActorFor(id).tell(RecogSessionActor.Frame(chunk, start), sender)
     case GetSessions =>
       sender ! context.children.filter(jabber !=).map(_.path.name).toList
-      //                                      ^
-      //                                      |
-      //                                      well, shave my legs and call me grandma!
+    //                                      ^
+    //                                      |
+    //                                      well, shave my legs and call me grandma!
   }
 
   // finds an ``ActorRef`` for the given session.

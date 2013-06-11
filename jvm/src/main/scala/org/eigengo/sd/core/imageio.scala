@@ -2,7 +2,7 @@ package org.eigengo.sd.core
 
 import com.xuggle.xuggler._
 import javax.imageio.ImageIO
-import java.io.{FileOutputStream, File, FileInputStream, ByteArrayOutputStream}
+import java.io.{ FileOutputStream, File, FileInputStream, ByteArrayOutputStream }
 import java.nio.channels.ReadableByteChannel
 import java.nio.ByteBuffer
 import java.util.concurrent.Semaphore
@@ -43,7 +43,7 @@ case class ChunkingDecoderContext[U](f: Array[Byte] => U) extends ImageDecoderCo
       buffer ++= chunk
       if (end) {
         f(buffer.toArray)
-        buffer clear()
+        buffer clear ()
       }
     }
   }
@@ -65,7 +65,7 @@ class H264DecoderContext[U](f: Array[Byte] => U) extends VideoDecoderContext {
   val tf = new TemporaryFile
 
   var isOpen = false
-  var videoStream: IStream     = _
+  var videoStream: IStream = _
   var videoCoder: IStreamCoder = _
 
   def open(): Boolean = {

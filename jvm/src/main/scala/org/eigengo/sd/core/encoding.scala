@@ -12,7 +12,7 @@ trait ImageEncoding {
     val b0: Byte = ((value & 0xff000000) >> 24).toByte
     val b1: Byte = ((value & 0x00ff0000) >> 16).toByte
     val b2: Byte = ((value & 0x0000ff00) >> 8).toByte
-    val b3: Byte =  (value & 0x000000ff).toByte
+    val b3: Byte = (value & 0x000000ff).toByte
 
     Array(b0, b1, b2, b3)
   }
@@ -24,16 +24,15 @@ trait ImageEncoding {
   private def singleImage(image: Array[Byte]): Array[Byte] = {
     val im: Array[Byte] = Array.ofDim(12 + image.length)
     val size = writeBEInt32(image.length)
-    Array.copy(Magic, 0,    im, 0, 4)
-    Array.copy(One, 0,      im, 4, 4)
-    Array.copy(size, 0,     im, 8, 4)
-    Array.copy(image, 0,    im, 12, image.length)
+    Array.copy(Magic, 0, im, 0, 4)
+    Array.copy(One, 0, im, 4, 4)
+    Array.copy(size, 0, im, 8, 4)
+    Array.copy(image, 0, im, 12, image.length)
 
     im
   }
 
   @inline
   def mkImagePayload(image: Array[Byte]): Array[Byte] = singleImage(image)
-
 
 }

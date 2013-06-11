@@ -30,12 +30,12 @@ void RabbitRpcServer::runBlocking() {
 		channel->BindQueue(queue, exchange, routingKey);
 		std::string tag = channel->BasicConsume(queue, "", true, true, false, 1);
 			
-			try {
-		  // consume the request message
-		  Envelope::ptr_t env = channel->BasicConsumeMessage(tag);
-				handleEnvelope(env, channel);
-			} catch (const std::runtime_error&) {
-		  break;
+		try {
+			// consume the request message
+			Envelope::ptr_t env = channel->BasicConsumeMessage(tag);
+			handleEnvelope(env, channel);
+		} catch (...) {
+			// never mind for now, eh?
 		}
 	}
 }

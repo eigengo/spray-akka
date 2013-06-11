@@ -1,20 +1,20 @@
 package org.eigengo.sd.api
 
-import akka.actor.{Actor, ActorRef}
+import akka.actor.{ Actor, ActorRef }
 import spray.http._
 import spray.http.HttpResponse
 import scala.util.Success
 import scala.util.Failure
 import org.eigengo.sd.core.Begin
-import org.eigengo.sd.core.CoordinatorActor.{SingleImage, FrameChunk}
+import org.eigengo.sd.core.CoordinatorActor.{ SingleImage, FrameChunk }
 
 object StreamingRecogService {
   def makePattern(start: String) = (start + """(.*)""").r
 
-  val RootUri   = "/recog"
-  val MJPEGUri  = makePattern("/recog/mjpeg/")
-  val H264Uri   = makePattern("/recog/h264/")
-  val RtspUri   = makePattern("/recog/rtsp/")
+  val RootUri = "/recog"
+  val MJPEGUri = makePattern("/recog/mjpeg/")
+  val H264Uri = makePattern("/recog/h264/")
+  val RtspUri = makePattern("/recog/rtsp/")
   val StaticUri = makePattern("/recog/static/")
 }
 
@@ -38,13 +38,13 @@ class StreamingRecogService(coordinator: ActorRef) extends Actor {
       val client = sender
       (coordinator ? Begin(1)).mapTo[String].onComplete {
         case Success(sessionId) => client ! HttpResponse(entity = sessionId)
-        case Failure(ex)        => client ! HttpResponse(entity = ex.getMessage, status = StatusCodes.InternalServerError)
+        case Failure(ex) => client ! HttpResponse(entity = ex.getMessage, status = StatusCodes.InternalServerError)
       }
 
     // stream to /recog/mjpeg/:id
     case ChunkedRequestStart(HttpRequest(HttpMethods.POST, MJPEGUri(sessionId), _, entity, _)) =>
       coordinator ! SingleImage(sessionId, entity.buffer, false)
-      // stream to /recog/h264/:id
+    // stream to /recog/h264/:id
     case ChunkedRequestStart(HttpRequest(HttpMethods.POST, H264Uri(sessionId), _, entity, _)) =>
       coordinator ! FrameChunk(sessionId, entity.buffer, false)
     case MessageChunk(body, extensions) =>
@@ -59,14 +59,14 @@ class StreamingRecogService(coordinator: ActorRef) extends Actor {
 
       // extract the components
       val sessionId = new String(body, 0, 36)
-      val marker    = body(36)
-      val end       = body(37) == 'E'
+      val marker = body(36)
+      val end = body(37) == 'E'
 
       // prepare the message
-      val message   = if (marker == 'H') FrameChunk(sessionId, frame, end) else SingleImage(sessionId, frame, end)
+      val message = if (marker == 'H') FrameChunk(sessionId, frame, end) else SingleImage(sessionId, frame, end)
 
       // our work is done: bang it to the coordinator.
-      coordinator   ! message
+      coordinator ! message
     case ChunkedMessageEnd(extensions, trailer) =>
       // we say nothing back
       sender ! HttpResponse(entity = "{}")

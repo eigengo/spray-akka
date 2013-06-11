@@ -1,6 +1,6 @@
 package org.eigengo.sd.core
 
-import akka.actor.{Props, ActorSystem}
+import akka.actor.{ Props, ActorSystem }
 import com.rabbitmq.client.ConnectionFactory
 import com.github.sstone.amqp.ConnectionOwner
 
@@ -8,7 +8,7 @@ case class Begin(minCoins: Int)
 
 /**
  * Contains configuration for the core
- */ 
+ */
 trait CoreConfiguration {
 
   def amqpConnectionFactory: ConnectionFactory

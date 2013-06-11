@@ -1,16 +1,16 @@
 package org.eigengo.sd.core
 
 import akka.actor._
-import scala.concurrent.{ExecutionContext, Future}
+import scala.concurrent.{ ExecutionContext, Future }
 import com.rabbitmq.client.AMQP
-import com.github.sstone.amqp.{ConnectionOwner, RpcClient}
+import com.github.sstone.amqp.{ ConnectionOwner, RpcClient }
 import akka.util.Timeout
 import com.github.sstone.amqp.Amqp.Publish
 import com.github.sstone.amqp.RpcClient.Response
 import scala.Some
 import com.github.sstone.amqp.RpcClient.Request
 import com.github.sstone.amqp.Amqp.Delivery
-import spray.json.{JsonParser, JsonReader, DefaultJsonProtocol}
+import spray.json.{ JsonParser, JsonReader, DefaultJsonProtocol }
 
 private[core] object RecogSessionActor {
 
@@ -38,8 +38,8 @@ private[core] object RecogSessionActor {
   private[core] case class Coin(center: Double, radius: Double)
   private[core] case class CoinResponse(coins: List[Coin], succeeded: Boolean)
 
-//  private[core] case class Face(left: Double, top: Double, width: Double, height: Double)
-//  private[core] case class FacesResponse(faces: List[Face], succeeded: Boolean)
+  //  private[core] case class Face(left: Double, top: Double, width: Double, height: Double)
+  //  private[core] case class FacesResponse(faces: List[Face], succeeded: Boolean)
 }
 
 /**
@@ -65,12 +65,7 @@ trait RecogSessionActorFormats extends DefaultJsonProtocol {
  * @param amqpConnection the AMQP connection we will use to create individual 'channels'
  * @param jabberActor the actor that will receive our output
  */
-private[core] class RecogSessionActor(amqpConnection: ActorRef, jabberActor: ActorRef) extends Actor with
-  FSM[RecogSessionActor.State, RecogSessionActor.Data] with
-  AmqpOperations with
-  ImageEncoding with
-  ActorLogging with
-  RecogSessionActorFormats {
+private[core] class RecogSessionActor(amqpConnection: ActorRef, jabberActor: ActorRef) extends Actor with FSM[RecogSessionActor.State, RecogSessionActor.Data] with AmqpOperations with ImageEncoding with ActorLogging with RecogSessionActorFormats {
 
   import RecogSessionActor._
   import scala.concurrent.duration._
@@ -97,12 +92,12 @@ private[core] class RecogSessionActor(amqpConnection: ActorRef, jabberActor: Act
 
   // when ``Active``, we can process images and frames
   when(Active, stateTimeout) {
-    case Event(Image(image, end), r@Running(minCoins, None)) =>
+    case Event(Image(image, end), r @ Running(minCoins, None)) =>
       // Image with no decoder yet. We will be needing the ChunkingDecoderContext.
       val decoder = new ChunkingDecoderContext(countCoins(minCoins))
       decoder.decode(image, end)
       stay() using r.copy(decoder = Some(decoder))
-    case Event(Image(image, end), Running(minCount, Some(decoder: ImageDecoderContext))) if image.length > 0  =>
+    case Event(Image(image, end), Running(minCount, Some(decoder: ImageDecoderContext))) if image.length > 0 =>
       // Image with existing decoder. Shut up and apply.
       decoder.decode(image, end)
       stay()
@@ -111,7 +106,7 @@ private[core] class RecogSessionActor(amqpConnection: ActorRef, jabberActor: Act
       decoder.close()
       goto(Completed)
 
-    case Event(Frame(frame, _), r@Running(minCoins, None)) =>
+    case Event(Frame(frame, _), r @ Running(minCoins, None)) =>
       // Frame with no decoder yet. We will be needing the H264DecoderContext.
       val decoder = new H264DecoderContext(countCoins(minCoins))
       decoder.decode(frame, true)
@@ -133,13 +128,13 @@ private[core] class RecogSessionActor(amqpConnection: ActorRef, jabberActor: Act
   // unhandled events in the states
   whenUnhandled {
     case Event(StateTimeout, _) => goto(Aborted)
-    case Event(GetInfo, _)      => sender ! "OK"; stay()
+    case Event(GetInfo, _) => sender ! "OK"; stay()
   }
 
   // cleanup
   onTransition {
-    case _ -> Aborted   => log.info("Aborting!"); context.stop(self)
-    case _ -> Completed => log.info("Done!");     context.stop(self)
+    case _ -> Aborted => log.info("Aborting!"); context.stop(self)
+    case _ -> Completed => log.info("Done!"); context.stop(self)
   }
 
   // go!
@@ -181,16 +176,14 @@ private[core] trait AmqpOperations {
    * @tparam A the expected response
    * @return the ``Future[A]`` of the response
    */
-  def amqpAsk[A](amqp: ActorRef)
-                       (exchange: String, routingKey: String, payload: Array[Byte])
-                       (implicit ctx: ExecutionContext, reader: JsonReader[A]): Future[A] = {
+  def amqpAsk[A](amqp: ActorRef)(exchange: String, routingKey: String, payload: Array[Byte])(implicit ctx: ExecutionContext, reader: JsonReader[A]): Future[A] = {
     import scala.concurrent.duration._
     import akka.pattern.ask
 
     implicit val timeout = Timeout(2.seconds)
 
     (amqp ? Request(Publish(exchange, routingKey, payload) :: Nil)).map {
-      case Response(Delivery(_, _, _, body)::_) =>
+      case Response(Delivery(_, _, _, body) :: _) =>
         val s = new String(body)
         reader.read(JsonParser(s))
       case x => sys.error("Bad match " + x)

@@ -1,8 +1,8 @@
 package org.eigengo.sd
 
 import scala.annotation.tailrec
-import org.eigengo.sd.core.{ConfigCoreConfiguration, Core, Begin, CoordinatorActor}
-import java.io.{InputStream, BufferedInputStream, FileInputStream}
+import org.eigengo.sd.core.{ ConfigCoreConfiguration, Core, Begin, CoordinatorActor }
+import java.io.{ InputStream, BufferedInputStream, FileInputStream }
 
 /**
  * Shell provides the command-line interface to the functionality in
@@ -19,23 +19,23 @@ object Shell extends App with Core with ConfigCoreConfiguration {
   // we set up sender that only prints out the responses to
   // be implicitly available for ``tell`` to pick up.
   implicit val _ = actor(new Act {
-      become {
-        case x => println(">>> " + x)
-      }
-    })
+    become {
+      case x => println(">>> " + x)
+    }
+  })
 
   // main command loop
   @tailrec
   private def commandLoop(): Unit = {
     Console.readLine() match {
-      case QuitCommand                => return
-      case BeginCommand(count)        => coordinator ! Begin(count.toInt)
-      case GetSessionsCommand         => coordinator ! GetSessions
+      case QuitCommand => return
+      case BeginCommand(count) => coordinator ! Begin(count.toInt)
+      case GetSessionsCommand => coordinator ! GetSessions
       case ImageCommand(id, fileName) => coordinator ! SingleImage(id, readAll(fileName), true)
-      case H264Command(id, fileName)  => readChunks(fileName, 64)(coordinator ! FrameChunk(id, _, true))
-      case GetInfoCommand(id)         => coordinator ! GetInfo(id)
+      case H264Command(id, fileName) => readChunks(fileName, 64)(coordinator ! FrameChunk(id, _, true))
+      case GetInfoCommand(id) => coordinator ! GetInfo(id)
 
-      case _                          => println("WTF??!!")
+      case _ => println("WTF??!!")
     }
 
     commandLoop()
@@ -53,14 +53,14 @@ object Shell extends App with Core with ConfigCoreConfiguration {
  */
 object Commands {
 
-  val BeginCommand       = "begin:(\\d+)".r
+  val BeginCommand = "begin:(\\d+)".r
   val GetSessionsCommand = "ls"
 
-  val ImageCommand    = "([0-9a-z\\-]{36})/image:?(.*)".r
-  val H264Command     = "([0-9a-z\\-]{36})/h264:?(.*)".r
-  val MJPEGCommand    = "([0-9a-z\\-]{36})/mjpeg:?(.*)".r
-  val GetInfoCommand  = "([0-9a-z\\-]{36})".r
-  val QuitCommand     = "quit"
+  val ImageCommand = "([0-9a-z\\-]{36})/image:?(.*)".r
+  val H264Command = "([0-9a-z\\-]{36})/h264:?(.*)".r
+  val MJPEGCommand = "([0-9a-z\\-]{36})/mjpeg:?(.*)".r
+  val GetInfoCommand = "([0-9a-z\\-]{36})".r
+  val QuitCommand = "quit"
 
 }
 
@@ -71,7 +71,6 @@ object Utils /* extends IfYouUseThisIWillEndorseYouForEnterprisePHP */ {
   private def getFullFileName(fileName: String) = {
     getClass.getResource(fileName).getPath
   }
-
 
   // Chuck Norris deals with all exceptions
   def readAll(fileName: String): Array[Byte] = {
@@ -87,7 +86,7 @@ object Utils /* extends IfYouUseThisIWillEndorseYouForEnterprisePHP */ {
     @tailrec
     def read(is: InputStream): Unit = {
       val buffer = Array.ofDim[Byte](16000)
-      Thread.sleep(buffer.length / kbps)   // simulate slow input :(
+      Thread.sleep(buffer.length / kbps) // simulate slow input :(
       val len = is.read(buffer)
       if (len > 0) {
         f(buffer)

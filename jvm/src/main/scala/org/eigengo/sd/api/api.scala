@@ -1,9 +1,9 @@
 package org.eigengo.sd.api
 
 import org.eigengo.sd.core.Core
-import akka.actor.{ActorRef, Props}
-import spray.can.server.{ServerSettings, HttpServer}
-import spray.io.{IOExtension, SingletonHandler}
+import akka.actor.{ ActorRef, Props }
+import spray.can.server.{ ServerSettings, HttpServer }
+import spray.io.{ IOExtension, SingletonHandler }
 
 /**
  * The REST API server. Uses Spray-can and Spray-can's chunked HTTP processing (see

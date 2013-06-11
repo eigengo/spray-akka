@@ -43,6 +43,9 @@ std::string Main::handleMessage(const AmqpClient::BasicMessage::ptr_t message, c
 		// bantha poodoo!
 		std::cerr << e.what() << std::endl;
 		responseJson.Add("succeeded", false);
+	} catch (...) {
+		// bantha poodoo!
+		responseJson.Add("succeeded", false);
 	}
 	Jzon::Writer writer(responseJson, Jzon::NoFormat);
 	writer.Write();

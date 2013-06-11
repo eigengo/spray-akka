@@ -20,7 +20,7 @@
     [super viewDidLoad];
 	capturing = false;
 	[self.statusLabel setText:@""];
-	NSURL *serverBaseUrl = [NSURL URLWithString:@"http://192.168.0.5:8080/recog"];
+	NSURL *serverBaseUrl = [NSURL URLWithString:@"http://10.6.3.90:8080/recog"];
 	serverConnection = [CVServerConnection connection:serverBaseUrl];
 }
 
